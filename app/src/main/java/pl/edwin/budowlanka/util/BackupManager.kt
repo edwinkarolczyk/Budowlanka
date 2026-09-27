@@ -6,6 +6,9 @@ import androidx.core.content.FileProvider
 import org.json.JSONArray
 import org.json.JSONObject
 import pl.edwin.budowlanka.data.AppDao
+import pl.edwin.budowlanka.data.EstimateStatus
+import pl.edwin.budowlanka.data.WorkTimeType
+import pl.edwin.budowlanka.domain.EstimateCalculator
 import java.io.File
 import java.io.FileOutputStream
 import java.util.zip.ZipEntry
@@ -134,6 +137,85 @@ object BackupManager {
             "crewMemberId" to x.crewMemberId, "eventType" to x.eventType,
             "at" to x.at, "note" to x.note
         ) }))
+
+        val now = System.currentTimeMillis()
+        val estimates = dao.allEstimates()
+        val works = dao.allWorks()
+        val estimateWorks = dao.allEstimateWorks()
+        val materials = dao.allMaterials()
+        val workMaterials = dao.allWorkMaterials()
+        val tools = dao.allTools()
+        val workTools = dao.allWorkTools()
+        val spaces = dao.allSpaces()
+        val estimateCrew = dao.allEstimateCrew()
+        val extraCosts = dao.allExtraCosts()
+        val sessions = dao.allWorkSessions()
+        val crewMembers = dao.allCrewMembers()
+
+        val results = estimates.associate { estimate ->
+            estimate.id to EstimateCalculator.calculate(
+                estimate, works, estimateWorks, materials, workMaterials,
+                tools, workTools, spaces, estimateCrew, extraCosts
+            )
+        }
+
+        fun hours(type: String, estimateId: Long? = null, crewId: Long? = null): Double =
+            sessions.asSequence()
+                .filter { it.type == type }
+                .filter { estimateId == null || it.estimateId == estimateId }
+                .filter { crewId == null || it.crewMemberId == crewId }
+                .sumOf { it.durationMillis(now) }
+                .toDouble() / 3_600_000.0
+
+        val byEstimate = arr(estimates.sortedByDescending { it.createdAt }.map { estimate ->
+            val planned = results[estimate.id]
+            val actual = hours(WorkTimeType.WORK, estimateId = estimate.id)
+            obj(
+                "estimateId" to estimate.id,
+                "title" to estimate.title,
+                "status" to estimate.status,
+                "clientTotal" to (planned?.clientTotal ?: 0.0),
+                "plannedLaborHours" to (planned?.laborHours ?: 0.0),
+                "actualWorkHours" to actual,
+                "laborHoursDelta" to (actual - (planned?.laborHours ?: 0.0)),
+                "travelHours" to hours(WorkTimeType.TRAVEL, estimateId = estimate.id),
+                "breakHours" to hours(WorkTimeType.BREAK, estimateId = estimate.id),
+                "supplyHours" to hours(WorkTimeType.SUPPLY, estimateId = estimate.id),
+                "startDate" to estimate.startDate,
+                "endDate" to estimate.endDate
+            )
+        })
+
+        val byCrew = arr(crewMembers.map { member ->
+            obj(
+                "crewMemberId" to member.id,
+                "name" to member.name,
+                "workHours" to hours(WorkTimeType.WORK, crewId = member.id),
+                "travelHours" to hours(WorkTimeType.TRAVEL, crewId = member.id),
+                "breakHours" to hours(WorkTimeType.BREAK, crewId = member.id),
+                "supplyHours" to hours(WorkTimeType.SUPPLY, crewId = member.id)
+            )
+        })
+
+        root.put("statistics", obj(
+            "capturedAt" to now,
+            "clientCount" to dao.allClients().size,
+            "estimateCount" to estimates.size,
+            "doneEstimateCount" to estimates.count { it.status == EstimateStatus.DONE },
+            "inProgressEstimateCount" to estimates.count { it.status == EstimateStatus.IN_PROGRESS },
+            "quotedValue" to results.values.sumOf { it.clientTotal },
+            "completedValue" to estimates.filter { it.status == EstimateStatus.DONE }
+                .sumOf { results[it.id]?.clientTotal ?: 0.0 },
+            "plannedLaborHours" to results.values.sumOf { it.laborHours },
+            "actualWorkHours" to hours(WorkTimeType.WORK),
+            "travelHours" to hours(WorkTimeType.TRAVEL),
+            "breakHours" to hours(WorkTimeType.BREAK),
+            "supplyHours" to hours(WorkTimeType.SUPPLY),
+            "sessionCount" to sessions.size,
+            "byEstimate" to byEstimate,
+            "byCrew" to byCrew
+        ))
+
         return root
     }
 
