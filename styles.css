@@ -292,7 +292,7 @@ h1 em, h2 em { color: var(--selected-strong); font-style: normal; }
 @media (max-width: 620px) {
   :root { --shell: calc(100% - 24px); }
   .topbar__inner { min-height: 66px; }
-  .nav { inset-top: 67px; }
+  .nav { inset: 67px 12px auto; }
   .brand small { display: none; }
   .hero { padding: 54px 0 42px; }
   h1 { font-size: clamp(3rem, 16vw, 4.8rem); }
