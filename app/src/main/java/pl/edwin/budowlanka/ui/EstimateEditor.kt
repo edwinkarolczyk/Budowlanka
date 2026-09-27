@@ -6,6 +6,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
@@ -115,8 +116,12 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
                         ) {
                             Surface(
                                 shape = CircleShape,
-                                color = if (selected) BudOrange else Color(0xFF60656A),
-                                modifier = Modifier.size(28.dp)
+                                color = if (selected) BudOrangeStrong else Color(0xFF4A5056),
+                                modifier = Modifier.size(if (selected) 34.dp else 28.dp)
+                                    .then(
+                                        if (selected) Modifier.border(2.dp, BudOrangeLight, CircleShape)
+                                        else Modifier
+                                    )
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
@@ -129,8 +134,16 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 label,
-                                color = if (selected) BudOrange else BudMuted,
+                                color = if (selected) BudOrangeLight else BudMuted,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                                 style = MaterialTheme.typography.labelSmall
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Box(
+                                Modifier
+                                    .height(3.dp)
+                                    .width(if (selected) 34.dp else 0.dp)
+                                    .background(if (selected) BudOrangeStrong else Color.Transparent, RoundedCornerShape(99.dp))
                             )
                         }
                     }
@@ -151,9 +164,15 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
                         listOf("Ekipa", "Realizacja").forEach { item ->
                             val selected = summaryMode == item
                             Surface(
-                                color = if (selected) BudOrange else BudPanel2,
+                                color = if (selected) BudOrangeStrong else BudPanel2,
                                 shape = RoundedCornerShape(9.dp),
-                                modifier = Modifier.weight(1f).clickable { summaryMode = item }
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .then(
+                                        if (selected) Modifier.border(2.dp, BudOrangeLight, RoundedCornerShape(9.dp))
+                                        else Modifier
+                                    )
+                                    .clickable { summaryMode = item }
                             ) {
                                 Text(
                                     item,
