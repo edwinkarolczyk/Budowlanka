@@ -879,6 +879,7 @@ fun CalendarScreen(vm: MainViewModel, onOpenEstimate: (Long) -> Unit) {
 fun SettingsScreen(vm: MainViewModel) {
     val settingsValue by vm.settings.collectAsStateWithLifecycle()
     val crew by vm.crewMembers.collectAsStateWithLifecycle()
+    val pcSync by vm.pcSyncStatus.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var addCrew by remember { mutableStateOf(false) }
@@ -925,8 +926,38 @@ fun SettingsScreen(vm: MainViewModel) {
             }) { Text("Eksportuj kopię ZIP") }
         }
 
+        Section("Synchronizacja z PC — Telefon → PC") {
+            Text(
+                "Telefon jest źródłem danych. Komputer tylko pobiera dane w tej samej sieci Wi‑Fi.",
+                color = BudMuted
+            )
+            if (pcSync.running) {
+                Text("● POŁĄCZONO / GOTOWE", color = BudGreen, fontWeight = FontWeight.Bold)
+                Text("Na komputerze otwórz:", color = BudMuted)
+                Text(pcSync.url, color = BudSelectedStrong, fontWeight = FontWeight.Bold)
+                Text("Kod dostępu: ${pcSync.code}", fontWeight = FontWeight.Bold)
+                Text(
+                    "Panel PC odświeża statystyki co 30 s i nie może zmieniać danych w telefonie.",
+                    color = BudMuted
+                )
+                OutlinedButton(
+                    onClick = { vm.stopPcSync() },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Zatrzymaj synchronizację PC") }
+            } else {
+                Text("Synchronizacja PC jest wyłączona.", color = BudMuted)
+                Button(
+                    onClick = { vm.startPcSync() },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Uruchom synchronizację PC") }
+            }
+            if (pcSync.error.isNotBlank()) {
+                Text("Błąd: ${pcSync.error}", color = MaterialTheme.colorScheme.error)
+            }
+        }
+
         Section("Aktualizacje — jeden kanał") {
-            Text("Wersja: 0.5.5")
+            Text("Wersja: 0.5.7")
             Button(onClick = {
                 scope.launch {
                     update = UpdateChecker.check(context)
