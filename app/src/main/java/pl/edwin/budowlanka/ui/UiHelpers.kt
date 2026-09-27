@@ -1,10 +1,15 @@
 package pl.edwin.budowlanka.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
@@ -16,7 +21,10 @@ fun money(v: Double): String =
 
 @Composable
 fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = BudPanel),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             content()
@@ -32,19 +40,45 @@ fun SimpleDropdown(
     onSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Column(Modifier) {
-        Text(label, style = MaterialTheme.typography.labelSmall)
+    Column {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = BudMuted)
+        Spacer(Modifier.height(3.dp))
         Box {
             OutlinedButton(
                 onClick = { expanded = true },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                border = ButtonDefaults.outlinedButtonBorder.copy(
+                    width = if (expanded) 2.dp else 1.dp
+                ),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = if (expanded) BudSelectedStrong else BudText,
+                    containerColor = if (expanded) BudSelectedSoft else Color.Transparent
+                ),
+                shape = RoundedCornerShape(10.dp)
             ) {
                 Text(options.firstOrNull { it.first == value }?.second ?: value.ifBlank { "Wybierz" })
             }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                containerColor = BudPanel2
+            ) {
                 options.forEach { (k, text) ->
+                    val selected = k == value
                     DropdownMenuItem(
-                        text = { Text(text) },
+                        text = {
+                            Text(
+                                text,
+                                color = if (selected) Color.Black else BudText
+                            )
+                        },
+                        leadingIcon = if (selected) {
+                            { Icon(Icons.Rounded.Check, null, tint = Color.Black) }
+                        } else null,
+                        colors = MenuDefaults.itemColors(),
+                        modifier = Modifier.background(
+                            if (selected) BudSelectedStrong else Color.Transparent
+                        ),
                         onClick = {
                             expanded = false
                             onSelected(k)
@@ -58,7 +92,8 @@ fun SimpleDropdown(
 
 private fun displayNumber(value: Double): String {
     if (value == 0.0) return ""
-    val raw = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString().trimEnd('0').trimEnd('.')
+    val raw = if (value % 1.0 == 0.0) value.toLong().toString()
+    else value.toString().trimEnd('0').trimEnd('.')
     return raw.replace('.', ',')
 }
 
@@ -92,15 +127,19 @@ fun NumberField(
                 }
             }
             text = filtered
-            if (filtered.isBlank()) {
-                onValue(0.0)
-            } else {
-                filtered.replace(',', '.').toDoubleOrNull()?.let(onValue)
-            }
+            if (filtered.isBlank()) onValue(0.0)
+            else filtered.replace(',', '.').toDoubleOrNull()?.let(onValue)
         },
         label = { Text(label) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = BudSelectedStrong,
+            focusedLabelColor = BudSelectedStrong,
+            cursorColor = BudSelectedStrong,
+            focusedContainerColor = BudSelectedSoft,
+            unfocusedBorderColor = BudLine
+        ),
         modifier = modifier.onFocusChanged { state ->
             focused = state.isFocused
             if (!state.isFocused) {
@@ -127,6 +166,13 @@ fun IntField(
         label = { Text(label) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = BudSelectedStrong,
+            focusedLabelColor = BudSelectedStrong,
+            cursorColor = BudSelectedStrong,
+            focusedContainerColor = BudSelectedSoft,
+            unfocusedBorderColor = BudLine
+        ),
         modifier = modifier
     )
 }
