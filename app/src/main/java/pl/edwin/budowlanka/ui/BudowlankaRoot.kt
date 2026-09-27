@@ -90,7 +90,7 @@ fun BudowlankaRoot(vm: MainViewModel) {
                                 color = BudText,
                                 style = MaterialTheme.typography.titleLarge
                             )
-                            Text("v0.5.7", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                            Text("v0.5.8", color = BudMuted, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                     IconButton(onClick = { screenName = RootScreen.SETTINGS.name }) {
