@@ -47,14 +47,18 @@ fun SimpleDropdown(
         Box {
             OutlinedButton(
                 onClick = { expanded = true },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        if (expanded) BudSelectedSoft else Color.Transparent,
+                        RoundedCornerShape(10.dp)
+                    ),
                 border = BorderStroke(
                     if (expanded) 2.dp else 1.dp,
                     if (expanded) BudSelectedStrong else BudLine
                 ),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = if (expanded) BudOrangeLight else BudText,
-                    containerColor = if (expanded) BudSelectedSoft else Color.Transparent
+                    contentColor = if (expanded) BudOrangeLight else BudText
                 ),
                 shape = RoundedCornerShape(10.dp)
             ) {
