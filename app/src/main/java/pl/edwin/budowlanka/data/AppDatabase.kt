@@ -17,10 +17,10 @@ import java.util.Locale
         ToolEntity::class, WorkToolEntity::class, PackageEntity::class, PackageWorkEntity::class,
         ClientEntity::class, SiteEntity::class, EstimateEntity::class, SpaceEntity::class,
         EstimateWorkEntity::class, CrewMemberEntity::class, EstimateCrewEntity::class,
-        ExtraCostEntity::class, PhotoEntity::class, MaterialPriceHistoryEntity::class,
+        ExtraCostEntity::class, PhotoEntity::class, OpeningEntity::class, MaterialPriceHistoryEntity::class,
         ShoppingItemEntity::class, ToolChecklistEntity::class, AppSettingsEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -59,6 +59,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS openings (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "spaceId INTEGER NOT NULL, " +
+                        "type TEXT NOT NULL, " +
+                        "name TEXT NOT NULL, " +
+                        "width REAL NOT NULL, " +
+                        "height REAL NOT NULL, " +
+                        "quantity INTEGER NOT NULL)"
+                )
+            }
+        }
+
         @Volatile private var INSTANCE: AppDatabase? = null
 
         private fun backupBeforeUpgrade(context: Context, targetVersion: Int) {
@@ -86,13 +101,13 @@ abstract class AppDatabase : RoomDatabase() {
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: run {
-                    backupBeforeUpgrade(context.applicationContext, 5)
+                    backupBeforeUpgrade(context.applicationContext, 6)
                     Room.databaseBuilder(
                         context.applicationContext,
                         AppDatabase::class.java,
                         DB_NAME
                     )
-                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                         .build()
                         .also { INSTANCE = it }
                 }
