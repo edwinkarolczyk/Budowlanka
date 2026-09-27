@@ -478,39 +478,117 @@ private fun WorksTab(
 ) {
     var add by remember { mutableStateOf(false) }
     var edit by remember { mutableStateOf<EstimateWorkEntity?>(null) }
+    var query by remember { mutableStateOf("") }
+    var selectedIds by remember { mutableStateOf(setOf<Long>()) }
+
+    LaunchedEffect(lines.map { it.id }) {
+        selectedIds = selectedIds.intersect(lines.map { it.id }.toSet())
+    }
+
+    val visibleLines = lines.filter { line ->
+        val work = works.firstOrNull { it.id == line.workId }
+        query.isBlank() || work?.name?.contains(query, ignoreCase = true) == true
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text("Żywy zakres robót", style = MaterialTheme.typography.headlineSmall)
-        Text("Dodajesz lub usuwasz pozycję — cena, czas, materiały i zakupy przeliczają się od razu.")
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("Żywy zakres robót", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Suma jest przeliczana po każdej zmianie.", color = BudMuted, style = MaterialTheme.typography.bodySmall)
+            }
+            Text(money(result.clientTotal), color = BudOrange, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Button(onClick = { add = true }) { Text("+ Robota") }
+            if (selectedIds.isNotEmpty()) {
+                OutlinedButton(onClick = {
+                    val chosen = lines.filter { it.id in selectedIds }
+                    vm.deleteEstimateWorks(chosen)
+                    selectedIds = emptySet()
+                }) {
+                    Text("Usuń zaznaczone (${selectedIds.size})")
+                }
+            }
         }
+
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            label = { Text("Szukaj w zakresie") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
 
         if (packages.isNotEmpty()) {
             Section("Pakiety") {
                 packages.forEach { p ->
-                    OutlinedButton(onClick = { vm.addPackageToEstimate(e.id, p.id) }, modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { vm.addPackageToEstimate(e.id, p.id) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Text("+ ${p.name}")
                     }
                 }
             }
         }
 
-        lines.forEach { line ->
+        visibleLines.forEach { line ->
             val work = works.firstOrNull { it.id == line.workId } ?: return@forEach
             val qty = EstimateCalculator.resolveQuantity(line, spaces)
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(work.name, style = MaterialTheme.typography.titleMedium)
-                    Text("${"%.2f".format(qty)} ${work.unit} • ${line.quantitySource}")
-                    Text("Materiał: ${line.materialTier} • zapas ${line.wastePctOverride ?: work.defaultWastePct}%")
+            val unitRate = line.laborRateOverride ?: work.laborRate
+            val laborValue = qty * unitRate
+            val selected = line.id in selectedIds
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = BudPanel),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = selected,
+                            onCheckedChange = { checked ->
+                                selectedIds = if (checked) selectedIds + line.id else selectedIds - line.id
+                            }
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(work.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            val room = spaces.firstOrNull { it.id == line.spaceId }?.name
+                            if (room != null) Text(room, color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                        }
+                        Text(money(laborValue), color = BudOrange, fontWeight = FontWeight.Bold)
+                    }
+
+                    Text(
+                        "${"%.2f".format(qty)} ${work.unit} × ${money(unitRate)}/${work.unit}",
+                        color = BudMuted
+                    )
+                    if (line.laborRateOverride != null) {
+                        Text("Własna stawka w tej wycenie", color = BudOrange, style = MaterialTheme.typography.labelSmall)
+                    } else if (work.priceRegion.isNotBlank()) {
+                        Text("${work.priceRegion} ${work.priceYear}", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                    }
+                    Text(
+                        "Materiał: ${line.materialTier} • zapas ${line.wastePctOverride ?: work.defaultWastePct}%",
+                        color = BudMuted,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         OutlinedButton(onClick = { edit = line }) { Text("Edytuj") }
-                        TextButton(onClick = { vm.deleteEstimateWork(line) }) { Text("Usuń z zakresu") }
+                        OutlinedButton(onClick = { vm.duplicateEstimateWork(line) }) { Text("Duplikuj") }
+                        TextButton(onClick = { vm.deleteEstimateWork(line) }) { Text("Usuń") }
                     }
                 }
             }
@@ -529,12 +607,15 @@ private fun WorksTab(
 
     if (add) {
         WorkLineDialog(e.id, null, works, spaces, onDismiss = { add = false }) {
-            vm.addEstimateWork(it); add = false
+            vm.addEstimateWork(it)
+            add = false
         }
     }
+
     edit?.let { current ->
         WorkLineDialog(e.id, current, works, spaces, onDismiss = { edit = null }) {
-            vm.addEstimateWork(it); edit = null
+            vm.addEstimateWork(it)
+            edit = null
         }
     }
 }
@@ -549,27 +630,92 @@ private fun WorkLineDialog(
     onSave: (EstimateWorkEntity) -> Unit
 ) {
     var workId by remember { mutableStateOf(current?.workId ?: works.firstOrNull()?.id ?: 0L) }
+    var workSearch by remember { mutableStateOf("") }
     var spaceId by remember { mutableStateOf(current?.spaceId ?: 0L) }
     var source by remember { mutableStateOf(current?.quantitySource ?: QuantitySource.MANUAL) }
     var qty by remember { mutableStateOf(current?.quantity ?: 1.0) }
     var tier by remember { mutableStateOf(current?.materialTier ?: MaterialTier.STANDARD) }
     var waste by remember { mutableStateOf(current?.wastePctOverride ?: -1.0) }
+    var useCustomRate by remember { mutableStateOf(current?.laborRateOverride != null) }
+    var customRate by remember {
+        mutableStateOf(
+            current?.laborRateOverride
+                ?: works.firstOrNull { it.id == workId }?.laborRate
+                ?: 0.0
+        )
+    }
+
+    val selectedWork = works.firstOrNull { it.id == workId }
+    val filteredWorks = works.filter {
+        workSearch.isBlank() ||
+            it.name.contains(workSearch, ignoreCase = true) ||
+            it.category.contains(workSearch, ignoreCase = true)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (current == null) "Dodaj robotę" else "Edytuj robotę") },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SimpleDropdown("Robota", workId.toString(), works.map { it.id.toString() to it.name }) {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = workSearch,
+                    onValueChange = { workSearch = it },
+                    label = { Text("Szukaj roboty") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                SimpleDropdown(
+                    "Robota",
+                    workId.toString(),
+                    filteredWorks.map { it.id.toString() to "${it.category} • ${it.name}" }
+                ) {
                     workId = it.toLongOrNull() ?: 0L
+                    if (!useCustomRate) {
+                        customRate = works.firstOrNull { w -> w.id == workId }?.laborRate ?: 0.0
+                    }
                 }
-                SimpleDropdown("Pomieszczenie", spaceId.toString(), listOf("0" to "Brak / całe zlecenie") + spaces.map { it.id.toString() to "${it.level} • ${it.name}" }) {
+
+                if (selectedWork != null) {
+                    Text(
+                        "Cennik: ${money(selectedWork.laborRate)}/${selectedWork.unit}" +
+                            if (selectedWork.priceRegion.isNotBlank()) " • ${selectedWork.priceRegion} ${selectedWork.priceYear}" else "",
+                        color = BudMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                SimpleDropdown(
+                    "Pomieszczenie",
+                    spaceId.toString(),
+                    listOf("0" to "Brak / całe zlecenie") +
+                        spaces.map { it.id.toString() to "${it.level} • ${it.name}" }
+                ) {
                     spaceId = it.toLongOrNull() ?: 0L
                 }
+
                 SimpleDropdown("Ilość z", source, QuantitySource.all.map { it to it }) { source = it }
-                NumberField("Ilość ręczna", qty, { qty = it })
+                if (source == QuantitySource.MANUAL) {
+                    NumberField("Ilość", qty, { qty = it }, Modifier.fillMaxWidth())
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(useCustomRate, {
+                        useCustomRate = it
+                        if (it && customRate == 0.0) {
+                            customRate = selectedWork?.laborRate ?: 0.0
+                        }
+                    })
+                    Text("Własna stawka dla tej wyceny")
+                }
+                if (useCustomRate) {
+                    NumberField("Cena robocizny /${selectedWork?.unit ?: "j.m."}", customRate, { customRate = it }, Modifier.fillMaxWidth())
+                }
+
                 SimpleDropdown("Klasa materiału", tier, MaterialTier.all.map { it to it }) { tier = it }
-                NumberField("Zapas % (-1 = domyślny roboty)", waste, { waste = it })
+                NumberField("Zapas % (-1 = domyślny roboty)", waste, { waste = it }, Modifier.fillMaxWidth())
             }
         },
         confirmButton = {
@@ -583,7 +729,8 @@ private fun WorkLineDialog(
                         quantity = qty,
                         quantitySource = source,
                         materialTier = tier,
-                        wastePctOverride = waste.takeIf { it >= 0.0 }
+                        wastePctOverride = waste.takeIf { it >= 0.0 },
+                        laborRateOverride = customRate.takeIf { useCustomRate }
                     )
                 )
             }) { Text("Zapisz") }
