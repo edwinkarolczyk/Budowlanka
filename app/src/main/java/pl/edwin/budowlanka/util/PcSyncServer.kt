@@ -12,6 +12,8 @@ import java.net.URI
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 data class PcSyncStatus(
     val running: Boolean = false,
@@ -28,6 +30,7 @@ object PcSyncServer {
 
     @Volatile private var socket: ServerSocket? = null
     @Volatile private var thread: Thread? = null
+    @Volatile private var clientExecutor: ExecutorService? = null
     @Volatile private var state = PcSyncStatus()
 
     fun currentStatus(): PcSyncStatus = state
@@ -53,6 +56,10 @@ object PcSyncServer {
                 bind(InetSocketAddress(PORT))
             }
             socket = server
+            val workers = Executors.newFixedThreadPool(4) { task ->
+                Thread(task, "Budowlanka-PC-Client").apply { isDaemon = true }
+            }
+            clientExecutor = workers
             state = PcSyncStatus(
                 running = true,
                 url = "http://" + localIpv4() + ":" + PORT + "/",
@@ -63,8 +70,17 @@ object PcSyncServer {
             thread = Thread({
                 while (!server.isClosed) {
                     val client = try { server.accept() } catch (_: Throwable) { break }
-                    runCatching { handle(client, dao, code, html) }
-                    runCatching { client.close() }
+                    runCatching {
+                        workers.execute {
+                            try {
+                                handle(client, dao, code, html)
+                            } finally {
+                                runCatching { client.close() }
+                            }
+                        }
+                    }.onFailure {
+                        runCatching { client.close() }
+                    }
                 }
             }, "Budowlanka-PC-Sync").apply {
                 isDaemon = true
@@ -73,8 +89,10 @@ object PcSyncServer {
             state
         }.getOrElse { err ->
             runCatching { socket?.close() }
+            runCatching { clientExecutor?.shutdownNow() }
             socket = null
             thread = null
+            clientExecutor = null
             state = PcSyncStatus(error = err.message ?: "Nie udało się uruchomić synchronizacji.")
             state
         }
@@ -85,8 +103,10 @@ object PcSyncServer {
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putBoolean(KEY_ENABLED, false).apply()
         runCatching { socket?.close() }
+        runCatching { clientExecutor?.shutdownNow() }
         socket = null
         thread = null
+        clientExecutor = null
         state = PcSyncStatus()
     }
 
