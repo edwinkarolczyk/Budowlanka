@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -97,7 +99,7 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
                         Text("${estimate.status} • ${money(result.clientTotal)}", color = BudMuted, style = MaterialTheme.typography.labelSmall)
                     }
                     IconButton(onClick = { }) {
-                        androidx.compose.material.icons.Icons.Rounded.MoreVert.let { Icon(it, "Więcej", tint = BudText) }
+                        Icon(Icons.Rounded.MoreVert, "Więcej", tint = BudText)
                     }
                 }
 
