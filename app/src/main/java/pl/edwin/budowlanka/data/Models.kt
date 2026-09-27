@@ -68,6 +68,8 @@ data class WorkEntity(
     val priceYear: Int = 0,
     val priceSource: String = "",
     val includesMaterial: Boolean = false,
+    val isFavorite: Boolean = false,
+    val isUserDefined: Boolean = false,
     val active: Boolean = true
 )
 
