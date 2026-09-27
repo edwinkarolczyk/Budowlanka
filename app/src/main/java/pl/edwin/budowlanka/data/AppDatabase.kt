@@ -6,6 +6,10 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Database(
     entities = [
@@ -16,13 +20,15 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ExtraCostEntity::class, PhotoEntity::class, MaterialPriceHistoryEntity::class,
         ShoppingItemEntity::class, ToolChecklistEntity::class, AppSettingsEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun dao(): AppDao
 
     companion object {
+        private const val DB_NAME = "budowlanka.db"
+
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE works ADD COLUMN laborRateLow REAL NOT NULL DEFAULT 0")
@@ -34,15 +40,49 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE estimate_works ADD COLUMN laborRateOverride REAL")
+            }
+        }
+
         @Volatile private var INSTANCE: AppDatabase? = null
+
+        private fun backupBeforeUpgrade(context: Context, targetVersion: Int) {
+            val source = context.getDatabasePath(DB_NAME)
+            if (!source.exists()) return
+
+            val prefs = context.getSharedPreferences("db_upgrade_backups", Context.MODE_PRIVATE)
+            val key = "backup_before_v$targetVersion"
+            if (prefs.getBoolean(key, false)) return
+
+            runCatching {
+                val dir = File(context.filesDir, "automatic-db-backups").apply { mkdirs() }
+                val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                val base = File(dir, "budowlanka_before_v${targetVersion}_$stamp.db")
+                source.copyTo(base, overwrite = true)
+
+                listOf("-wal", "-shm").forEach { suffix ->
+                    val extra = File(source.absolutePath + suffix)
+                    if (extra.exists()) extra.copyTo(File(base.absolutePath + suffix), overwrite = true)
+                }
+                prefs.edit().putBoolean(key, true).apply()
+            }
+        }
 
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
-                INSTANCE ?: Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "budowlanka.db"
-                ).build().also { INSTANCE = it }
+                INSTANCE ?: run {
+                    backupBeforeUpgrade(context.applicationContext, 3)
+                    Room.databaseBuilder(
+                        context.applicationContext,
+                        AppDatabase::class.java,
+                        DB_NAME
+                    )
+                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                        .build()
+                        .also { INSTANCE = it }
+                }
             }
     }
 }
