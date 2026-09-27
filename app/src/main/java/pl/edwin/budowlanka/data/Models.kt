@@ -44,6 +44,13 @@ object PayMode {
     val all = listOf(PROFIT_PERCENT, HOURLY, DAILY, FLAT)
 }
 
+object OpeningType {
+    const val WINDOW = "OKNO"
+    const val DOOR = "DRZWI"
+    const val OTHER = "INNY"
+    val all = listOf(WINDOW, DOOR, OTHER)
+}
+
 object FulfillmentStatus {
     const val HAVE = "MAM"
     const val TO_BUY = "DO_KUPIENIA"
@@ -182,6 +189,19 @@ data class SpaceEntity(
     fun floorArea(): Double = (length * width).coerceAtLeast(0.0)
     fun ceilingArea(): Double = floorArea()
     fun wallArea(): Double = (2.0 * (length + width) * height - openingsArea).coerceAtLeast(0.0)
+}
+
+@Entity(tableName = "openings")
+data class OpeningEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val spaceId: Long,
+    val type: String = OpeningType.WINDOW,
+    val name: String = "",
+    val width: Double = 0.0,
+    val height: Double = 0.0,
+    val quantity: Int = 1
+) {
+    fun area(): Double = (width.coerceAtLeast(0.0) * height.coerceAtLeast(0.0) * quantity.coerceAtLeast(1))
 }
 
 @Entity(tableName = "estimate_works")
