@@ -23,7 +23,7 @@ import pl.edwin.budowlanka.data.*
 import pl.edwin.budowlanka.domain.EstimateCalculator
 import pl.edwin.budowlanka.domain.EstimateResult
 import pl.edwin.budowlanka.util.PdfExporter
-import pl.edwin.budowlanka.util.PdfPayload
+import pl.edwin.budowlanka.util.PdfPayload\nimport kotlinx.coroutines.launch
 
 @Composable
 fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
@@ -615,7 +615,7 @@ private fun RealizationTab(
             }
         } else {
             Section("Lista zakupów") {
-                OutlinedButton(onClick = { androidx.lifecycle.ViewModelKt.getViewModelScope(vm).launchCompat { vm.syncFulfillment(e.id) } }) {
+                OutlinedButton(onClick = { scope.launch { vm.syncFulfillment(e.id) } }) {
                     Text("Odśwież listy z aktualnego zakresu")
                 }
                 if (shopping.isEmpty()) Text("Brak materiałów albo lista nie została jeszcze utworzona.")
@@ -723,8 +723,4 @@ private fun SignaturePad(saved: String, onSave: (String) -> Unit) {
 @Composable
 private fun <T> rememberSaveableCompat(initializer: () -> MutableState<T>): MutableState<T> {
     return remember { initializer() }
-}
-
-private fun kotlinx.coroutines.CoroutineScope.launchCompat(block: suspend () -> Unit) {
-    kotlinx.coroutines.launch(block = block)
 }
