@@ -1,6 +1,6 @@
 {
-  "versionCode": 12,
-  "versionName": "0.5.7",
-  "changelog": "Rzut 3: jednokierunkowa synchronizacja Telefon → PC przez lokalne Wi‑Fi. W Ustawieniach uruchamiasz panel PC, dostajesz adres i kod dostępu. PC działa tylko do odczytu, pobiera pełny snapshot danych oraz statystyki: zlecenia, klienci, wartość wycen, planowane i rzeczywiste roboczogodziny, dojazdy, przerwy, zaopatrzenie i rozbicie na ekipę. Panel odświeża się co 30 s i pozwala zapisać JSON.",
+  "versionCode": 13,
+  "versionName": "0.5.8",
+  "changelog": "Rozbudowany panel PC tylko do odczytu: Pulpit z alertami, pełne karty zleceń i kosztorysów, klienci z historią, czas pracy i aktywne liczniki, kalendarz z wykrywaniem kolizji, katalog robót/materiałów/narzędzi, szczegóły synchronizacji oraz eksport JSON i CSV. Kierunek danych pozostaje Telefon → PC.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
