@@ -957,7 +957,7 @@ fun SettingsScreen(vm: MainViewModel) {
         }
 
         Section("Aktualizacje — jeden kanał") {
-            Text("Wersja: 0.5.7")
+            Text("Wersja: 0.5.8")
             Button(onClick = {
                 scope.launch {
                     update = UpdateChecker.check(context)
