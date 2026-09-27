@@ -1,0 +1,6 @@
+{
+  "versionCode": 6,
+  "versionName": "0.5.1",
+  "changelog": "Poprawione wpisywanie liczb: brak samoczynnego .0, klawiatura numeryczna i normalne wpisywanie przecinka/kropki. Uporządkowany system aktualizacji wersji rozwojowych.",
+  "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
+}
