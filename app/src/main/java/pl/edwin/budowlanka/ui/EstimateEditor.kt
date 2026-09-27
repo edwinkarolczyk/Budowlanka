@@ -562,7 +562,7 @@ private fun WorksTab(
         visibleLines.forEach { line ->
             val work = works.firstOrNull { it.id == line.workId } ?: return@forEach
             val qty = EstimateCalculator.resolveQuantity(line, spaces)
-            val unitRate = line.laborRateOverride ?: work.laborRate
+            val unitRate = EstimateCalculator.resolveLaborRate(line, work)
             val laborValue = qty * unitRate
             val selected = line.id in selectedIds
 
@@ -609,9 +609,19 @@ private fun WorksTab(
                         "${"%.2f".format(qty)} ${work.unit} × ${money(unitRate)}/${work.unit}",
                         color = BudMuted
                     )
-                    if (line.laborRateOverride != null) {
-                        Text("Własna stawka w tej wycenie", color = BudOrange, style = MaterialTheme.typography.labelSmall)
-                    } else if (work.priceRegion.isNotBlank()) {
+                    val priceModeLabel = when (line.laborPriceMode) {
+                        LaborPriceMode.MIN -> "MIN z widełek"
+                        LaborPriceMode.MAX -> "MAX z widełek"
+                        LaborPriceMode.CUSTOM -> "Własna stawka"
+                        else -> "Cena katalogowa"
+                    }
+                    Text(
+                        priceModeLabel,
+                        color = if (line.laborPriceMode == LaborPriceMode.CATALOG) BudMuted else BudOrangeLight,
+                        fontWeight = if (line.laborPriceMode == LaborPriceMode.CATALOG) FontWeight.Normal else FontWeight.Bold,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                    if (work.priceRegion.isNotBlank()) {
                         Text("${work.priceRegion} ${work.priceYear}", color = BudMuted, style = MaterialTheme.typography.labelSmall)
                     }
                     Text(
@@ -671,7 +681,12 @@ private fun WorkLineDialog(
     var qty by remember { mutableStateOf(current?.quantity ?: 1.0) }
     var tier by remember { mutableStateOf(current?.materialTier ?: MaterialTier.STANDARD) }
     var waste by remember { mutableStateOf(current?.wastePctOverride ?: -1.0) }
-    var useCustomRate by remember { mutableStateOf(current?.laborRateOverride != null) }
+    var priceMode by remember {
+        mutableStateOf(
+            current?.laborPriceMode
+                ?: if (current?.laborRateOverride != null) LaborPriceMode.CUSTOM else LaborPriceMode.CATALOG
+        )
+    }
     var customRate by remember {
         mutableStateOf(
             current?.laborRateOverride
@@ -708,7 +723,7 @@ private fun WorkLineDialog(
                     filteredWorks.map { it.id.toString() to "${it.category} • ${it.name}" }
                 ) {
                     workId = it.toLongOrNull() ?: 0L
-                    if (!useCustomRate) {
+                    if (priceMode != LaborPriceMode.CUSTOM) {
                         customRate = works.firstOrNull { w -> w.id == workId }?.laborRate ?: 0.0
                     }
                 }
@@ -736,16 +751,58 @@ private fun WorkLineDialog(
                     NumberField("Ilość", qty, { qty = it }, Modifier.fillMaxWidth())
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(useCustomRate, {
-                        useCustomRate = it
-                        if (it && customRate == 0.0) {
-                            customRate = selectedWork?.laborRate ?: 0.0
+                Text("Cena robocizny", fontWeight = FontWeight.SemiBold)
+                val priceModes = listOf(
+                    LaborPriceMode.MIN to "MIN",
+                    LaborPriceMode.CATALOG to "KATALOG",
+                    LaborPriceMode.MAX to "MAX",
+                    LaborPriceMode.CUSTOM to "WŁASNA"
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    priceModes.forEach { (mode, label) ->
+                        val active = priceMode == mode
+                        Surface(
+                            color = if (active) BudOrangeStrong else BudPanel2,
+                            shape = RoundedCornerShape(9.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .then(
+                                    if (active) Modifier.border(2.dp, BudOrangeLight, RoundedCornerShape(9.dp))
+                                    else Modifier
+                                )
+                                .clickable {
+                                    priceMode = mode
+                                    if (mode == LaborPriceMode.CUSTOM && customRate == 0.0) {
+                                        customRate = selectedWork?.laborRate ?: 0.0
+                                    }
+                                }
+                        ) {
+                            Text(
+                                label,
+                                color = if (active) Color.Black else BudMuted,
+                                fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 2.dp, vertical = 10.dp)
+                            )
                         }
-                    })
-                    Text("Własna stawka dla tej wyceny")
+                    }
                 }
-                if (useCustomRate) {
+
+                if (selectedWork != null) {
+                    Text(
+                        "MIN ${money(selectedWork.laborRateLow.takeIf { it > 0.0 } ?: selectedWork.laborRate)} • " +
+                            "KATALOG ${money(selectedWork.laborRate)} • " +
+                            "MAX ${money(selectedWork.laborRateHigh.takeIf { it > 0.0 } ?: selectedWork.laborRate)}",
+                        color = BudMuted,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+
+                if (priceMode == LaborPriceMode.CUSTOM) {
                     NumberField("Cena robocizny /${selectedWork?.unit ?: "j.m."}", customRate, { customRate = it }, Modifier.fillMaxWidth())
                 }
 
@@ -765,7 +822,8 @@ private fun WorkLineDialog(
                         quantitySource = source,
                         materialTier = tier,
                         wastePctOverride = waste.takeIf { it >= 0.0 },
-                        laborRateOverride = customRate.takeIf { useCustomRate }
+                        laborRateOverride = customRate.takeIf { priceMode == LaborPriceMode.CUSTOM },
+                        laborPriceMode = priceMode
                     )
                 )
             }) { Text("Zapisz") }
