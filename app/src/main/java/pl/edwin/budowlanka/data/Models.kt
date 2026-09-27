@@ -52,8 +52,14 @@ data class WorkEntity(
     val category: String = "Ogólne",
     val unit: String = "m²",
     val laborRate: Double = 0.0,
+    val laborRateLow: Double = 0.0,
+    val laborRateHigh: Double = 0.0,
     val laborHoursPerUnit: Double = 0.0,
     val defaultWastePct: Double = 10.0,
+    val priceRegion: String = "",
+    val priceYear: Int = 0,
+    val priceSource: String = "",
+    val includesMaterial: Boolean = false,
     val active: Boolean = true
 )
 
