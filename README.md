@@ -1,8 +1,17 @@
-# Budowlanka — wersja rozwojowa 0.5.3
+# Budowlanka — wersja rozwojowa 0.5.4
 
 Androidowa aplikacja offline-first do wycen robót budowlanych. Nazwa produktu jest tymczasowa — docelowa nazwa zostanie wybrana później.
 
 ## Zakres 0.5
+
+### 0.5.4 — widoczność zaznaczeń i katalog Małopolskie
+- mocniejszy pomarańczowy stan aktywny we wszystkich głównych kontrolkach,
+- wyraźne zaznaczenie dolnej nawigacji, etapów kosztorysu, filtrów i wybranych pozycji,
+- jaśniejsze obramowanie aktywnych pól i list rozwijanych,
+- wybór ceny pozycji: MIN / KATALOG / MAX / WŁASNA,
+- filtr katalogu: Wszystkie / Małopolskie 2026 / Moje,
+- praktyczne pakiety robót: malowanie, gładź+malowanie, łazienka, dach i elewacja,
+- migracja Room 3→4 bez kasowania danych i automatyczna kopia bazy przed migracją.
 
 ### 0.5.3 — ergonomia i bezpieczeństwo
 - własna stawka robocizny dla konkretnej pozycji kosztorysu bez zmiany katalogu,
@@ -69,4 +78,4 @@ Po wydaniu tagu `v*` workflow tworzy GitHub Release z plikiem `Budowlanka.apk`.
 
 ## Zasada danych
 
-Aktualizacje aplikacji nie powinny kasować bazy użytkownika. Każda przyszła zmiana schematu Room musi mieć migrację. W 0.5.3 schemat ma wersję 3. Migracje 1→2 i 2→3 są jawne; przed migracją tworzona jest lokalna kopia pliku bazy.
+Aktualizacje aplikacji nie powinny kasować bazy użytkownika. Każda przyszła zmiana schematu Room musi mieć migrację. W 0.5.4 schemat ma wersję 4. Migracje 1→2 i 2→3 są jawne; przed migracją tworzona jest lokalna kopia pliku bazy.
