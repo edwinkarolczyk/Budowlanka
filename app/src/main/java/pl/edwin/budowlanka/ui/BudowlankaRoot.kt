@@ -1,24 +1,33 @@
 package pl.edwin.budowlanka.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import pl.edwin.budowlanka.MainViewModel
 import pl.edwin.budowlanka.util.UpdateChecker
 import pl.edwin.budowlanka.util.UpdateInfo
-import pl.edwin.budowlanka.MainViewModel
 
 private enum class RootScreen(val label: String) {
     DASHBOARD("Pulpit"),
-    ESTIMATES("Wyceny"),
-    CATALOG("Baza"),
+    ESTIMATES("Kosztorysy"),
     CLIENTS("Klienci"),
     CALENDAR("Kalendarz"),
+    CATALOG("Materiały"),
     TOOLS("Narzędzia"),
-    SETTINGS("Ustawienia")
+    SETTINGS("Ustawienia"),
+    MORE("Więcej")
 }
 
 @Composable
@@ -34,67 +43,169 @@ fun BudowlankaRoot(vm: MainViewModel) {
     }
 
     if (estimateId != null) {
-        Box {
-            EstimateEditor(
-                vm = vm,
-                estimateId = estimateId!!,
-                onBack = { estimateId = null }
-            )
+        Box(Modifier.fillMaxSize().background(BudBg)) {
+            EstimateEditor(vm = vm, estimateId = estimateId!!, onBack = { estimateId = null })
             if (!updateDismissed) updateInfo?.let { u ->
-                UpdateDialog(u, onDownload = { UpdateChecker.download(context, u); updateDismissed = true }, onDismiss = { updateDismissed = true })
+                UpdateDialog(
+                    u,
+                    onDownload = { UpdateChecker.download(context, u); updateDismissed = true },
+                    onDismiss = { updateDismissed = true }
+                )
             }
         }
         return
     }
 
     val screen = RootScreen.valueOf(screenName)
+    val bottomItems = listOf(
+        Triple(RootScreen.ESTIMATES, Icons.Rounded.ReceiptLong, "Kosztorysy"),
+        Triple(RootScreen.CLIENTS, Icons.Rounded.Groups, "Klienci"),
+        Triple(RootScreen.CALENDAR, Icons.Rounded.CalendarMonth, "Kalendarz"),
+        Triple(RootScreen.CATALOG, Icons.Rounded.Inventory2, "Materiały"),
+        Triple(RootScreen.MORE, Icons.Rounded.MoreHoriz, "Więcej")
+    )
+
     Scaffold(
+        containerColor = BudBg,
         topBar = {
-            Surface(tonalElevation = 3.dp) {
+            Surface(color = Color(0xFF090C0E), shadowElevation = 8.dp) {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text("Budowlanka", style = MaterialTheme.typography.titleLarge)
-                        Text("wersja rozwojowa 0.5.0", style = MaterialTheme.typography.labelSmall)
+                    IconButton(onClick = { screenName = RootScreen.MORE.name }) {
+                        Icon(Icons.Rounded.Menu, "Menu", tint = BudText)
                     }
-                    Text(screen.label, style = MaterialTheme.typography.titleMedium)
+                    Row(
+                        Modifier.weight(1f).clickable { screenName = RootScreen.DASHBOARD.name },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(Icons.Rounded.HomeWork, null, tint = BudOrange, modifier = Modifier.size(30.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "BUDOWLANKA",
+                                fontWeight = FontWeight.Black,
+                                color = BudText,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            Text("v0.5.2", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                    IconButton(onClick = { screenName = RootScreen.SETTINGS.name }) {
+                        Icon(Icons.Rounded.Settings, "Ustawienia", tint = BudText)
+                    }
                 }
             }
         },
         bottomBar = {
-            Surface(tonalElevation = 5.dp) {
-                Row(
-                    Modifier.fillMaxWidth().padding(4.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    RootScreen.entries.forEach { item ->
-                        TextButton(
-                            onClick = { screenName = item.name },
-                            contentPadding = PaddingValues(horizontal = 5.dp, vertical = 6.dp)
-                        ) {
-                            Text(item.label, style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
+            NavigationBar(containerColor = Color(0xFF0A0D0F), tonalElevation = 8.dp) {
+                bottomItems.forEach { (item, icon, label) ->
+                    val selected = screen == item
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = { screenName = item.name },
+                        icon = {
+                            Icon(
+                                icon,
+                                contentDescription = label,
+                                tint = if (selected) BudOrange else BudMuted
+                            )
+                        },
+                        label = {
+                            Text(
+                                label,
+                                color = if (selected) BudOrange else BudMuted,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = Color.Transparent,
+                            selectedIconColor = BudOrange,
+                            selectedTextColor = BudOrange,
+                            unselectedIconColor = BudMuted,
+                            unselectedTextColor = BudMuted
+                        )
+                    )
                 }
             }
         }
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
+        Box(Modifier.padding(padding).fillMaxSize().background(BudBg)) {
             when (screen) {
-                RootScreen.DASHBOARD -> DashboardScreen(vm, onOpenEstimate = { estimateId = it })
+                RootScreen.DASHBOARD -> DashboardScreen(
+                    vm = vm,
+                    onOpenEstimate = { estimateId = it },
+                    onNewEstimate = {
+                        vm.addEstimate("Nowy kosztorys") { estimateId = it }
+                    },
+                    onClients = { screenName = RootScreen.CLIENTS.name },
+                    onCatalog = { screenName = RootScreen.CATALOG.name },
+                    onTools = { screenName = RootScreen.TOOLS.name },
+                    onCalendar = { screenName = RootScreen.CALENDAR.name },
+                    onSettings = { screenName = RootScreen.SETTINGS.name }
+                )
                 RootScreen.ESTIMATES -> EstimatesScreen(vm, onOpenEstimate = { estimateId = it })
-                RootScreen.CATALOG -> CatalogScreen(vm)
                 RootScreen.CLIENTS -> ClientsScreen(vm)
                 RootScreen.CALENDAR -> CalendarScreen(vm, onOpenEstimate = { estimateId = it })
+                RootScreen.CATALOG -> CatalogScreen(vm)
                 RootScreen.TOOLS -> ToolsScreen(vm)
                 RootScreen.SETTINGS -> SettingsScreen(vm)
+                RootScreen.MORE -> MoreScreen(
+                    onDashboard = { screenName = RootScreen.DASHBOARD.name },
+                    onCatalog = { screenName = RootScreen.CATALOG.name },
+                    onTools = { screenName = RootScreen.TOOLS.name },
+                    onSettings = { screenName = RootScreen.SETTINGS.name }
+                )
             }
         }
     }
+
     if (!updateDismissed) updateInfo?.let { u ->
-        UpdateDialog(u, onDownload = { UpdateChecker.download(context, u); updateDismissed = true }, onDismiss = { updateDismissed = true })
+        UpdateDialog(
+            u,
+            onDownload = { UpdateChecker.download(context, u); updateDismissed = true },
+            onDismiss = { updateDismissed = true }
+        )
+    }
+}
+
+@Composable
+private fun MoreScreen(
+    onDashboard: () -> Unit,
+    onCatalog: () -> Unit,
+    onTools: () -> Unit,
+    onSettings: () -> Unit
+) {
+    Column(
+        Modifier.fillMaxSize().background(BudBg).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text("Więcej", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        val items = listOf(
+            Triple("Pulpit", Icons.Rounded.Dashboard, onDashboard),
+            Triple("Roboty / pakiety / materiały", Icons.Rounded.Wallpaper, onCatalog),
+            Triple("Narzędzia", Icons.Rounded.Handyman, onTools),
+            Triple("Ustawienia", Icons.Rounded.Settings, onSettings)
+        )
+        items.forEach { (label, icon, action) ->
+            Card(
+                colors = CardDefaults.cardColors(containerColor = BudPanel),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().clickable { action() }
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(icon, null, tint = BudOrange)
+                    Spacer(Modifier.width(14.dp))
+                    Text(label, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                    Icon(Icons.Rounded.ChevronRight, null, tint = BudMuted)
+                }
+            }
+        }
     }
 }
 
@@ -104,7 +215,11 @@ private fun UpdateDialog(info: UpdateInfo, onDownload: () -> Unit, onDismiss: ()
         onDismissRequest = onDismiss,
         title = { Text("Dostępna aktualizacja ${info.versionName}") },
         text = { Text(info.changelog.ifBlank { "Dostępna jest nowsza wersja aplikacji." }) },
-        confirmButton = { Button(onClick = onDownload) { Text("Pobierz") } },
+        confirmButton = {
+            Button(onClick = onDownload, colors = ButtonDefaults.buttonColors(containerColor = BudOrange)) {
+                Text("Pobierz", color = Color.Black)
+            }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Później") } }
     )
 }
