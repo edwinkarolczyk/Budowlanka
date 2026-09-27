@@ -29,6 +29,11 @@ jobs:
         with:
           gradle-version: "8.6"
 
+      - name: Prepare development signing key
+        run: |
+          mkdir -p ci
+          base64 -d ci/dev-keystore.p12.b64 > ci/dev-keystore.p12
+
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
 
@@ -41,6 +46,17 @@ jobs:
           name: Budowlanka-APK
           path: Budowlanka.apk
           if-no-files-found: error
+
+      - name: Publish development APK
+        if: github.event_name == 'push' && github.ref == 'refs/heads/development-0.5'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: development-latest
+          name: Budowlanka Development
+          target_commitish: development-0.5
+          prerelease: true
+          make_latest: false
+          files: Budowlanka.apk
 
       - name: GitHub Release for tag
         if: startsWith(github.ref, 'refs/tags/v')
