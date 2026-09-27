@@ -149,9 +149,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun addClient(v: ClientEntity) = viewModelScope.launch { dao.upsertClient(v) }
-    fun addClientWithSite(client: ClientEntity, siteName: String, address: String) = viewModelScope.launch {
+    fun addClientWithSite(
+        client: ClientEntity,
+        siteName: String,
+        address: String,
+        onCreated: (Long, Long?) -> Unit = { _, _ -> }
+    ) = viewModelScope.launch {
         val clientId = dao.upsertClient(client)
-        if (address.isNotBlank()) {
+        val siteId = if (address.isNotBlank()) {
             dao.upsertSite(
                 SiteEntity(
                     clientId = clientId,
@@ -159,7 +164,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     address = address
                 )
             )
-        }
+        } else null
+        onCreated(clientId, siteId)
     }
     fun addSite(v: SiteEntity) = viewModelScope.launch { dao.upsertSite(v) }
 
