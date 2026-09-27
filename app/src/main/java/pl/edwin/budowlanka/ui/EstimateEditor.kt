@@ -569,10 +569,18 @@ private fun RealizationTab(
     val context = LocalContext.current
     val active = e.status == EstimateStatus.ACCEPTED || e.status == EstimateStatus.IN_PROGRESS || e.status == EstimateStatus.DONE
     var photoSpaceId by remember { mutableStateOf(0L) }
+    var photoWorkId by remember { mutableStateOf(0L) }
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            vm.addPhoto(PhotoEntity(estimateId = e.id, spaceId = photoSpaceId.takeIf { it != 0L }, uri = uri.toString()))
+            vm.addPhoto(
+                PhotoEntity(
+                    estimateId = e.id,
+                    spaceId = photoSpaceId.takeIf { it != 0L },
+                    estimateWorkId = photoWorkId.takeIf { it != 0L },
+                    uri = uri.toString()
+                )
+            )
         }
     }
 
@@ -660,16 +668,37 @@ private fun RealizationTab(
 
         Section("Zdjęcia z oględzin / budowy") {
             SimpleDropdown(
-                "Przypisz zdjęcie do",
+                "Pomieszczenie",
                 photoSpaceId.toString(),
-                listOf("0" to "Całe zlecenie") + spaces.map { it.id.toString() to it.name },
-                { photoSpaceId = it.toLongOrNull() ?: 0L }
+                listOf("0" to "Bez pomieszczenia") + spaces.map { it.id.toString() to it.name },
+                {
+                    photoSpaceId = it.toLongOrNull() ?: 0L
+                    if (photoSpaceId != 0L) photoWorkId = 0L
+                }
+            )
+            SimpleDropdown(
+                "albo konkretna robota",
+                photoWorkId.toString(),
+                listOf("0" to "Bez roboty") + lines.mapNotNull { line ->
+                    works.firstOrNull { it.id == line.workId }?.let { w -> line.id.toString() to w.name }
+                },
+                {
+                    photoWorkId = it.toLongOrNull() ?: 0L
+                    if (photoWorkId != 0L) photoSpaceId = 0L
+                }
             )
             Button(onClick = {
                 photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             }) { Text("+ Dodaj zdjęcie") }
             photos.forEach { p ->
-                val place = spaces.firstOrNull { it.id == p.spaceId }?.name ?: "całe zlecenie"
+                val place = when {
+                    p.spaceId != null -> spaces.firstOrNull { it.id == p.spaceId }?.name ?: "pomieszczenie"
+                    p.estimateWorkId != null -> {
+                        val line = lines.firstOrNull { it.id == p.estimateWorkId }
+                        works.firstOrNull { it.id == line?.workId }?.name ?: "robota"
+                    }
+                    else -> "całe zlecenie"
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Zdjęcie #${p.id} • $place")
                     TextButton(onClick = { vm.deletePhoto(p) }) { Text("Usuń") }
