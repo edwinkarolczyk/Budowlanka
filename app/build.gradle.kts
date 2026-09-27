@@ -12,8 +12,23 @@ android {
         applicationId = "pl.edwin.budowlanka"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "0.5.0"
+        versionCode = 6
+        versionName = "0.5.1"
+    }
+
+    signingConfigs {
+        create("development") {
+            storeFile = rootProject.file("ci/dev-keystore.p12")
+            storePassword = "budowlanka-dev"
+            keyAlias = "buddev"
+            keyPassword = "budowlanka-dev"
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("development")
+        }
     }
 
     buildFeatures { compose = true }
