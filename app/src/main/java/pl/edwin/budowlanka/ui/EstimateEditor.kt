@@ -1015,6 +1015,13 @@ private fun WorkLineDialog(
     }
 
     val selectedWork = works.firstOrNull { it.id == workId }
+
+    LaunchedEffect(workId) {
+        if (current == null && selectedWork != null) {
+            source = EstimateCalculator.suggestedQuantitySource(selectedWork)
+        }
+    }
+
     val filteredWorks = works.filter {
         workSearch.isBlank() ||
             it.name.contains(workSearch, ignoreCase = true) ||
@@ -1065,9 +1072,26 @@ private fun WorkLineDialog(
                     spaceId = it.toLongOrNull() ?: 0L
                 }
 
-                SimpleDropdown("Ilość z", source, QuantitySource.all.map { it to it }) { source = it }
-                if (source == QuantitySource.MANUAL) {
-                    NumberField("Ilość", qty, { qty = it }, Modifier.fillMaxWidth())
+                SimpleDropdown(
+                    "Źródło obmiaru",
+                    source,
+                    QuantitySource.all.map { it to QuantitySource.label(it) }
+                ) { source = it }
+
+                if (source == QuantitySource.MANUAL || source == QuantitySource.PIECES) {
+                    NumberField(
+                        if (source == QuantitySource.PIECES) "Liczba sztuk" else "Ilość",
+                        qty,
+                        { qty = it },
+                        Modifier.fillMaxWidth()
+                    )
+                } else {
+                    Text(
+                        if (spaceId == 0L) "Obmiar zostanie zsumowany ze wszystkich pomieszczeń."
+                        else "Obmiar zostanie pobrany z wybranego pomieszczenia.",
+                        color = BudMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
 
                 Text("Cena robocizny", fontWeight = FontWeight.SemiBold)
@@ -1164,7 +1188,7 @@ private fun CrewTab(
     val profitSum = crew.filter { it.payMode == PayMode.PROFIT_PERCENT }.sumOf { it.profitSharePct }
 
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
+        Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text("Ekipa 1–6 osób", style = MaterialTheme.typography.headlineSmall)

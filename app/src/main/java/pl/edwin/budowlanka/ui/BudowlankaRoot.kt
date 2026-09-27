@@ -43,7 +43,7 @@ fun BudowlankaRoot(vm: MainViewModel) {
     }
 
     if (estimateId != null) {
-        Box(Modifier.fillMaxSize().background(BudBg)) {
+        Surface(modifier = Modifier.fillMaxSize(), color = BudBg, contentColor = BudText) {
             EstimateEditor(vm = vm, estimateId = estimateId!!, onBack = { estimateId = null })
             if (!updateDismissed) updateInfo?.let { u ->
                 UpdateDialog(

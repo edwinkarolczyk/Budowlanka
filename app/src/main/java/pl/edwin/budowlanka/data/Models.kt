@@ -18,7 +18,21 @@ object QuantitySource {
     const val FLOOR = "PODLOGA"
     const val WALLS = "SCIANY"
     const val CEILING = "SUFIT"
-    val all = listOf(MANUAL, FLOOR, WALLS, CEILING)
+    const val PERIMETER = "OBWOD"
+    const val OPENINGS = "OTWORY"
+    const val PIECES = "SZTUKI"
+
+    val all = listOf(MANUAL, FLOOR, WALLS, CEILING, PERIMETER, OPENINGS, PIECES)
+
+    fun label(value: String): String = when (value) {
+        FLOOR -> "Podłoga [m²]"
+        WALLS -> "Ściany [m²]"
+        CEILING -> "Sufit [m²]"
+        PERIMETER -> "Obwód [mb]"
+        OPENINGS -> "Otwory [m²]"
+        PIECES -> "Sztuki"
+        else -> "Ręcznie"
+    }
 }
 
 object MaterialTier {
@@ -77,7 +91,8 @@ data class WorkEntity(
     val includesMaterial: Boolean = false,
     val isFavorite: Boolean = false,
     val isUserDefined: Boolean = false,
-    val active: Boolean = true
+    val active: Boolean = true,
+    val defaultQuantitySource: String = QuantitySource.MANUAL
 )
 
 @Entity(tableName = "materials")
@@ -188,7 +203,8 @@ data class SpaceEntity(
 ) {
     fun floorArea(): Double = (length * width).coerceAtLeast(0.0)
     fun ceilingArea(): Double = floorArea()
-    fun wallArea(): Double = (2.0 * (length + width) * height - openingsArea).coerceAtLeast(0.0)
+    fun perimeter(): Double = (2.0 * (length + width)).coerceAtLeast(0.0)
+    fun wallArea(): Double = (perimeter() * height - openingsArea).coerceAtLeast(0.0)
 }
 
 @Entity(tableName = "openings")

@@ -20,7 +20,7 @@ import java.util.Locale
         ExtraCostEntity::class, PhotoEntity::class, OpeningEntity::class, MaterialPriceHistoryEntity::class,
         ShoppingItemEntity::class, ToolChecklistEntity::class, AppSettingsEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -74,6 +74,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE works ADD COLUMN defaultQuantitySource TEXT NOT NULL DEFAULT 'MANUAL'")
+
+                // Sensowne wartości startowe dla istniejącego cennika.
+                db.execSQL("UPDATE works SET defaultQuantitySource='PODLOGA' WHERE name LIKE '%podłog%' OR name LIKE '%posadzk%' OR name LIKE '%wylewk%' OR name LIKE '%panel%'")
+                db.execSQL("UPDATE works SET defaultQuantitySource='SUFIT' WHERE name LIKE '%sufit%'")
+                db.execSQL("UPDATE works SET defaultQuantitySource='SCIANY' WHERE name LIKE '%ścian%' OR name LIKE '%tynk%' OR name LIKE '%gład%' OR name LIKE '%malowan%' OR name LIKE '%elewac%'")
+                db.execSQL("UPDATE works SET defaultQuantitySource='OBWOD' WHERE name LIKE '%listw%' OR name LIKE '%cokoł%' OR name LIKE '%cokół%'")
+                db.execSQL("UPDATE works SET defaultQuantitySource='SZTUKI' WHERE unit LIKE '%szt%'")
+            }
+        }
+
         @Volatile private var INSTANCE: AppDatabase? = null
 
         private fun backupBeforeUpgrade(context: Context, targetVersion: Int) {
@@ -101,13 +114,13 @@ abstract class AppDatabase : RoomDatabase() {
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: run {
-                    backupBeforeUpgrade(context.applicationContext, 6)
+                    backupBeforeUpgrade(context.applicationContext, 7)
                     Room.databaseBuilder(
                         context.applicationContext,
                         AppDatabase::class.java,
                         DB_NAME
                     )
-                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                         .build()
                         .also { INSTANCE = it }
                 }

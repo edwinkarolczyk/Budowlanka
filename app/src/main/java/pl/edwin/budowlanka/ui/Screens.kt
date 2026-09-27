@@ -517,6 +517,7 @@ private fun WorkDialog(current: WorkEntity? = null, onDismiss: () -> Unit, onSav
     var region by remember(current) { mutableStateOf(current?.priceRegion ?: "") }
     var year by remember(current) { mutableStateOf(current?.priceYear ?: 0) }
     var source by remember(current) { mutableStateOf(current?.priceSource ?: "") }
+    var qtySource by remember(current) { mutableStateOf(current?.defaultQuantitySource ?: QuantitySource.MANUAL) }
     var includesMaterial by remember(current) { mutableStateOf(current?.includesMaterial ?: false) }
     var advanced by remember(current) { mutableStateOf(current != null) }
 
@@ -568,6 +569,11 @@ private fun WorkDialog(current: WorkEntity? = null, onDismiss: () -> Unit, onSav
                 if (advanced) {
                     NumberField("Roboczogodziny / jednostkę", hours, { hours = it }, Modifier.fillMaxWidth())
                     NumberField("Domyślny zapas %", waste, { waste = it }, Modifier.fillMaxWidth())
+                    SimpleDropdown(
+                        "Domyślne źródło obmiaru",
+                        qtySource,
+                        QuantitySource.all.map { it to QuantitySource.label(it) }
+                    ) { qtySource = it }
                     OutlinedTextField(region, { region = it }, label = { Text("Region cennika") }, modifier = Modifier.fillMaxWidth())
                     IntField("Rok cennika", year, { year = it }, Modifier.fillMaxWidth())
                     OutlinedTextField(source, { source = it }, label = { Text("Źródło / uwagi") }, modifier = Modifier.fillMaxWidth())
@@ -597,7 +603,8 @@ private fun WorkDialog(current: WorkEntity? = null, onDismiss: () -> Unit, onSav
                         includesMaterial = includesMaterial,
                         isFavorite = current?.isFavorite ?: false,
                         isUserDefined = current?.isUserDefined ?: true,
-                        active = current?.active ?: true
+                        active = current?.active ?: true,
+                        defaultQuantitySource = qtySource
                     )
                 )
             }) { Text("Zapisz") }

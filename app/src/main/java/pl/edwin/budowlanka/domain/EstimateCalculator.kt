@@ -46,13 +46,42 @@ object EstimateCalculator {
         else -> work.laborRate
     }
 
+    fun suggestedQuantitySource(work: WorkEntity): String {
+        if (work.defaultQuantitySource != QuantitySource.MANUAL) return work.defaultQuantitySource
+
+        val text = "${work.category} ${work.name}".lowercase()
+        return when {
+            work.unit.lowercase().contains("szt") -> QuantitySource.PIECES
+            text.contains("podłog") || text.contains("posadzk") ||
+                text.contains("wylewk") || text.contains("panel") -> QuantitySource.FLOOR
+            text.contains("sufit") -> QuantitySource.CEILING
+            text.contains("listw") || text.contains("cokoł") || text.contains("cokół") -> QuantitySource.PERIMETER
+            text.contains("ścian") || text.contains("tynk") || text.contains("gład") ||
+                text.contains("malowan") || text.contains("elewac") -> QuantitySource.WALLS
+            else -> QuantitySource.MANUAL
+        }
+    }
+
     fun resolveQuantity(line: EstimateWorkEntity, spaces: List<SpaceEntity>): Double {
-        val space = spaces.firstOrNull { it.id == line.spaceId }
-        return when (line.quantitySource) {
-            QuantitySource.FLOOR -> space?.floorArea() ?: line.quantity
-            QuantitySource.WALLS -> space?.wallArea() ?: line.quantity
-            QuantitySource.CEILING -> space?.ceilingArea() ?: line.quantity
-            else -> line.quantity
+        if (line.quantitySource == QuantitySource.MANUAL || line.quantitySource == QuantitySource.PIECES) {
+            return line.quantity.coerceAtLeast(0.0)
+        }
+
+        val selectedSpaces = if (line.spaceId == null) {
+            spaces
+        } else {
+            spaces.filter { it.id == line.spaceId }
+        }
+
+        return selectedSpaces.sumOf { space ->
+            when (line.quantitySource) {
+                QuantitySource.FLOOR -> space.floorArea()
+                QuantitySource.WALLS -> space.wallArea()
+                QuantitySource.CEILING -> space.ceilingArea()
+                QuantitySource.PERIMETER -> space.perimeter()
+                QuantitySource.OPENINGS -> space.openingsArea.coerceAtLeast(0.0)
+                else -> 0.0
+            }
         }.coerceAtLeast(0.0)
     }
 
@@ -80,7 +109,10 @@ object EstimateCalculator {
         val materialTierById = mutableMapOf<Long, String>()
         val toolQty = linkedMapOf<Long, Int>()
 
-        estimateWorks.filter { it.estimateId == estimate.id }.forEach { line ->
+        val scopedLines = estimateWorks.filter { it.estimateId == estimate.id }
+        val hasWorkScope = scopedLines.isNotEmpty()
+
+        scopedLines.forEach { line ->
             val work = works.firstOrNull { it.id == line.workId } ?: return@forEach
             val qty = resolveQuantity(line, spaces.filter { it.estimateId == estimate.id })
             val laborRate = resolveLaborRate(line, work)
@@ -116,7 +148,9 @@ object EstimateCalculator {
 
         val laborSell = laborBase * (1.0 + estimate.marginLaborPct / 100.0)
         val materialSell = materialBase * (1.0 + estimate.marginMaterialPct / 100.0)
-        val preOverall = laborSell + materialSell + extras + travel
+        // Dopóki nie ma choć jednej roboty, wycena klienta pozostaje zerowa.
+        // Dojazd i koszty dodatkowe są zapamiętane, ale nie tworzą samodzielnie wyceny.
+        val preOverall = if (hasWorkScope) laborSell + materialSell + extras + travel else 0.0
         val beforeDiscount = preOverall * (1.0 + estimate.marginOverallPct / 100.0)
         val discountValue = beforeDiscount * estimate.discountPct.coerceIn(0.0, 100.0) / 100.0
         val clientTotal = (beforeDiscount - discountValue).coerceAtLeast(0.0)
@@ -134,18 +168,22 @@ object EstimateCalculator {
         val technicalDays = if (laborHours <= 0.0) 0.0 else laborHours / (hoursPerDay * efficiency)
 
         var directCrew = 0.0
-        crew.filter { it.estimateId == estimate.id }.forEach { c ->
-            when (c.payMode) {
-                PayMode.HOURLY -> directCrew += laborHours * (c.workSharePct / 100.0) * c.rate
-                PayMode.DAILY -> directCrew += technicalDays * c.rate
-                PayMode.FLAT -> directCrew += c.rate
+        if (hasWorkScope) {
+            crew.filter { it.estimateId == estimate.id }.forEach { c ->
+                when (c.payMode) {
+                    PayMode.HOURLY -> directCrew += laborHours * (c.workSharePct / 100.0) * c.rate
+                    PayMode.DAILY -> directCrew += technicalDays * c.rate
+                    PayMode.FLAT -> directCrew += c.rate
+                }
             }
         }
 
-        val estimatedProfit = (clientTotal - materialBase - extras - travel - directCrew).coerceAtLeast(0.0)
+        val estimatedProfit = if (hasWorkScope) {
+            (clientTotal - materialBase - extras - travel - directCrew).coerceAtLeast(0.0)
+        } else 0.0
         val targetPerDay = if (estimate.workDaysMonthSnapshot > 0)
             estimate.monthlyTargetSnapshot / estimate.workDaysMonthSnapshot.toDouble() else 0.0
-        val financialDays = if (targetPerDay > 0.0) estimatedProfit / targetPerDay else 0.0
+        val financialDays = if (hasWorkScope && targetPerDay > 0.0) estimatedProfit / targetPerDay else 0.0
 
         val toolNeeds = toolQty.mapNotNull { (id, qty) ->
             tools.firstOrNull { it.id == id }?.let { ToolNeed(id, it.name, qty) }
