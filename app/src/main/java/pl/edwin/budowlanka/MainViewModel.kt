@@ -111,7 +111,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         onCreated(newId)
     }
 
-    fun addWork(v: WorkEntity) = viewModelScope.launch { dao.upsertWork(v) }
+    fun addWork(v: WorkEntity) = viewModelScope.launch {
+        dao.upsertWork(if (v.id == 0L) v.copy(isUserDefined = true) else v)
+    }
+    fun toggleWorkFavorite(v: WorkEntity) = viewModelScope.launch {
+        dao.upsertWork(v.copy(isFavorite = !v.isFavorite))
+    }
     fun deleteWork(v: WorkEntity) = viewModelScope.launch { dao.deleteWork(v) }
 
     fun addMaterial(v: MaterialEntity) = viewModelScope.launch {
