@@ -121,6 +121,8 @@ fun CatalogScreen(vm: MainViewModel) {
     var addWork by remember { mutableStateOf(false) }
     var addMaterial by remember { mutableStateOf(false) }
     var addPackage by remember { mutableStateOf(false) }
+    var editWork by remember { mutableStateOf<WorkEntity?>(null) }
+    var editMaterial by remember { mutableStateOf<MaterialEntity?>(null) }
     var linkWorkId by remember { mutableStateOf<Long?>(null) }
     var packageId by remember { mutableStateOf<Long?>(null) }
 
@@ -154,6 +156,7 @@ fun CatalogScreen(vm: MainViewModel) {
                                 }
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedButton(onClick = { editWork = w }) { Text("Edytuj") }
                                 OutlinedButton(onClick = { linkWorkId = w.id }) { Text("+ materiał") }
                                 TextButton(onClick = { vm.deleteWork(w) }) { Text("Usuń") }
                             }
@@ -170,7 +173,10 @@ fun CatalogScreen(vm: MainViewModel) {
                             if (m.manufacturer.isNotBlank()) Text(m.manufacturer)
                             Text("Tani ${money(m.priceBudget)} • Standard ${money(m.priceStandard)} • Premium ${money(m.pricePremium)} / ${m.unit}")
                             Text("Stan: ${m.stockQty} ${m.unit}", style = MaterialTheme.typography.labelSmall)
-                            TextButton(onClick = { vm.deleteMaterial(m) }) { Text("Usuń") }
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedButton(onClick = { editMaterial = m }) { Text("Edytuj") }
+                                TextButton(onClick = { vm.deleteMaterial(m) }) { Text("Usuń") }
+                            }
                         }
                     }
                 }
@@ -198,9 +204,19 @@ fun CatalogScreen(vm: MainViewModel) {
             vm.addWork(it); addWork = false
         }
     }
+    editWork?.let { current ->
+        WorkDialog(current = current, onDismiss = { editWork = null }) {
+            vm.addWork(it); editWork = null
+        }
+    }
     if (addMaterial) {
         MaterialDialog(onDismiss = { addMaterial = false }) {
             vm.addMaterial(it); addMaterial = false
+        }
+    }
+    editMaterial?.let { current ->
+        MaterialDialog(current = current, onDismiss = { editMaterial = null }) {
+            vm.addMaterial(it); editMaterial = null
         }
     }
     if (addPackage) {
@@ -272,13 +288,13 @@ fun CatalogScreen(vm: MainViewModel) {
 }
 
 @Composable
-private fun WorkDialog(onDismiss: () -> Unit, onSave: (WorkEntity) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("Ogólne") }
-    var unit by remember { mutableStateOf("m²") }
-    var rate by remember { mutableStateOf(0.0) }
-    var hours by remember { mutableStateOf(0.0) }
-    var waste by remember { mutableStateOf(10.0) }
+private fun WorkDialog(current: WorkEntity? = null, onDismiss: () -> Unit, onSave: (WorkEntity) -> Unit) {
+    var name by remember(current) { mutableStateOf(current?.name ?: "") }
+    var category by remember(current) { mutableStateOf(current?.category ?: "Ogólne") }
+    var unit by remember(current) { mutableStateOf(current?.unit ?: "m²") }
+    var rate by remember(current) { mutableStateOf(current?.laborRate ?: 0.0) }
+    var hours by remember(current) { mutableStateOf(current?.laborHoursPerUnit ?: 0.0) }
+    var waste by remember(current) { mutableStateOf(current?.defaultWastePct ?: 10.0) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nowa robota") },
@@ -294,7 +310,7 @@ private fun WorkDialog(onDismiss: () -> Unit, onSave: (WorkEntity) -> Unit) {
         },
         confirmButton = {
             Button(onClick = {
-                onSave(WorkEntity(name = name.ifBlank { "Nowa robota" }, category = category, unit = unit, laborRate = rate, laborHoursPerUnit = hours, defaultWastePct = waste))
+                onSave(WorkEntity(id = current?.id ?: 0L, name = name.ifBlank { "Nowa robota" }, category = category, unit = unit, laborRate = rate, laborHoursPerUnit = hours, defaultWastePct = waste, active = current?.active ?: true))
             }) { Text("Zapisz") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
@@ -302,13 +318,13 @@ private fun WorkDialog(onDismiss: () -> Unit, onSave: (WorkEntity) -> Unit) {
 }
 
 @Composable
-private fun MaterialDialog(onDismiss: () -> Unit, onSave: (MaterialEntity) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var unit by remember { mutableStateOf("szt.") }
-    var manufacturer by remember { mutableStateOf("") }
-    var cheap by remember { mutableStateOf(0.0) }
-    var standard by remember { mutableStateOf(0.0) }
-    var premium by remember { mutableStateOf(0.0) }
+private fun MaterialDialog(current: MaterialEntity? = null, onDismiss: () -> Unit, onSave: (MaterialEntity) -> Unit) {
+    var name by remember(current) { mutableStateOf(current?.name ?: "") }
+    var unit by remember(current) { mutableStateOf(current?.unit ?: "szt.") }
+    var manufacturer by remember(current) { mutableStateOf(current?.manufacturer ?: "") }
+    var cheap by remember(current) { mutableStateOf(current?.priceBudget ?: 0.0) }
+    var standard by remember(current) { mutableStateOf(current?.priceStandard ?: 0.0) }
+    var premium by remember(current) { mutableStateOf(current?.pricePremium ?: 0.0) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nowy materiał") },
@@ -324,7 +340,7 @@ private fun MaterialDialog(onDismiss: () -> Unit, onSave: (MaterialEntity) -> Un
         },
         confirmButton = {
             Button(onClick = {
-                onSave(MaterialEntity(name = name.ifBlank { "Nowy materiał" }, unit = unit, manufacturer = manufacturer, priceBudget = cheap, priceStandard = standard, pricePremium = premium))
+                onSave(MaterialEntity(id = current?.id ?: 0L, name = name.ifBlank { "Nowy materiał" }, unit = unit, manufacturer = manufacturer, priceBudget = cheap, priceStandard = standard, pricePremium = premium, stockQty = current?.stockQty ?: 0.0, active = current?.active ?: true))
             }) { Text("Zapisz") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
