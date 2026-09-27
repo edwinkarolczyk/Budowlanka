@@ -26,8 +26,8 @@ fun SimpleDropdown(
     label: String,
     value: String,
     options: List<Pair<String, String>>,
-    onSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(modifier) {
