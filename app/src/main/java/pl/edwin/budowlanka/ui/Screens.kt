@@ -154,12 +154,25 @@ fun EstimatesScreen(vm: MainViewModel, onOpenEstimate: (Long) -> Unit) {
             Text("Nie ma jeszcze wycen.")
         }
         estimates.forEach { e ->
-            Card(onClick = { onOpenEstimate(e.id) }, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(14.dp)) {
-                    Text(e.title, style = MaterialTheme.typography.titleMedium)
-                    Text(e.status)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = BudPanel),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(e.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(e.status, color = BudMuted)
                     if (e.startDate.isNotBlank()) Text("${e.startDate} – ${e.endDate.ifBlank { "?" }}")
-                    Text(if (e.includeMaterials) "Robocizna + materiały" else "Tylko robocizna", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        if (e.includeMaterials) "Robocizna + materiały" else "Tylko robocizna",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = BudMuted
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { onOpenEstimate(e.id) }) { Text("Otwórz") }
+                        OutlinedButton(onClick = {
+                            vm.duplicateEstimate(e.id) { onOpenEstimate(it) }
+                        }) { Text("Duplikuj") }
+                    }
                 }
             }
         }
@@ -824,7 +837,7 @@ fun SettingsScreen(vm: MainViewModel) {
         }
 
         Section("Aktualizacje — jeden kanał") {
-            Text("Wersja: 0.5.2")
+            Text("Wersja: 0.5.3")
             Button(onClick = {
                 scope.launch {
                     update = UpdateChecker.check(context)
