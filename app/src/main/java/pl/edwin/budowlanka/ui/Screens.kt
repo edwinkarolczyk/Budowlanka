@@ -1,14 +1,23 @@
 package pl.edwin.budowlanka.ui
 
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import pl.edwin.budowlanka.MainViewModel
@@ -18,43 +27,108 @@ import pl.edwin.budowlanka.util.UpdateChecker
 import pl.edwin.budowlanka.util.UpdateInfo
 
 @Composable
-fun DashboardScreen(vm: MainViewModel, onOpenEstimate: (Long) -> Unit) {
+fun DashboardScreen(
+    vm: MainViewModel,
+    onOpenEstimate: (Long) -> Unit,
+    onNewEstimate: () -> Unit = {},
+    onClients: () -> Unit = {},
+    onCatalog: () -> Unit = {},
+    onTools: () -> Unit = {},
+    onCalendar: () -> Unit = {},
+    onSettings: () -> Unit = {}
+) {
     val estimates by vm.estimates.collectAsStateWithLifecycle()
-    val settings by vm.settings.collectAsStateWithLifecycle()
-    val active = estimates.filter { it.status == EstimateStatus.ACCEPTED || it.status == EstimateStatus.IN_PROGRESS }
+    val works by vm.works.collectAsStateWithLifecycle()
 
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp),
+        Modifier.fillMaxSize().background(BudBg).verticalScroll(rememberScrollState()).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Pulpit", style = MaterialTheme.typography.headlineSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Card(Modifier.weight(1f)) {
-                Column(Modifier.padding(12.dp)) {
-                    Text("Wyceny")
-                    Text(estimates.size.toString(), style = MaterialTheme.typography.headlineMedium)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = BudPanel2),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Rounded.LocationOn, null, tint = BudOrange, modifier = Modifier.size(32.dp))
+                    Column {
+                        Text("Małopolskie 2026", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Text("Domyślne ceny i normy", color = BudMuted, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
-            }
-            Card(Modifier.weight(1f)) {
-                Column(Modifier.padding(12.dp)) {
-                    Text("Aktywne roboty")
-                    Text(active.size.toString(), style = MaterialTheme.typography.headlineMedium)
+                Surface(shape = RoundedCornerShape(10.dp), color = BudOrange) {
+                    Text("AKTYWNE", color = Color.Black, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp))
                 }
             }
         }
-        Section("Cel finansowy") {
-            Text("Miesięcznie: ${money(settings?.monthlyTarget ?: 0.0)}")
-            val days = settings?.workDaysMonth ?: 0
-            val daily = if (days > 0) (settings?.monthlyTarget ?: 0.0) / days else 0.0
-            Text("Wymagany średni dochód dzienny: ${money(daily)}")
+
+        val tiles = listOf(
+            Triple("Nowy kosztorys", Icons.Rounded.NoteAdd, onNewEstimate),
+            Triple("Klienci", Icons.Rounded.Groups, onClients),
+            Triple("Roboty", Icons.Rounded.Wallpaper, onCatalog),
+            Triple("Materiały", Icons.Rounded.Inventory2, onCatalog),
+            Triple("Pakiety robót", Icons.Rounded.Layers, onCatalog),
+            Triple("Narzędzia", Icons.Rounded.Handyman, onTools),
+            Triple("Realizacje", Icons.Rounded.AssignmentTurnedIn, { }),
+            Triple("Kalendarz", Icons.Rounded.CalendarMonth, onCalendar),
+            Triple("Ustawienia", Icons.Rounded.Settings, onSettings)
+        )
+        tiles.chunked(3).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { (label, icon, action) ->
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = BudPanel),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.weight(1f).height(92.dp).clickable { action() }
+                    ) {
+                        Column(
+                            Modifier.fillMaxSize().padding(10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(icon, null, tint = BudOrange, modifier = Modifier.size(30.dp))
+                            Spacer(Modifier.height(7.dp))
+                            Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 2)
+                        }
+                    }
+                }
+            }
         }
-        Section("W realizacji / zaakceptowane") {
-            if (active.isEmpty()) Text("Brak aktywnych zleceń.")
-            active.forEach { e ->
-                OutlinedButton(onClick = { onOpenEstimate(e.id) }, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.fillMaxWidth()) {
-                        Text(e.title)
-                        Text("${e.status} • ${e.startDate.ifBlank { "termin nieustalony" }}", style = MaterialTheme.typography.labelSmall)
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Ostatnie kosztorysy", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("${works.size} pozycji w cenniku", color = BudOrange, style = MaterialTheme.typography.labelMedium)
+        }
+
+        if (estimates.isEmpty()) {
+            Card(colors = CardDefaults.cardColors(containerColor = BudPanel), modifier = Modifier.fillMaxWidth()) {
+                Text("Brak kosztorysów. Utwórz pierwszy.", color = BudMuted, modifier = Modifier.padding(16.dp))
+            }
+        } else {
+            estimates.take(5).forEach { e ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = BudPanel),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { onOpenEstimate(e.id) }
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Icon(Icons.Rounded.ReceiptLong, null, tint = BudOrange)
+                            Column {
+                                Text(e.title, fontWeight = FontWeight.SemiBold)
+                                Text(e.status, color = if (e.status == EstimateStatus.DONE) BudGreen else BudMuted, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        Icon(Icons.Rounded.ChevronRight, null, tint = BudMuted)
                     }
                 }
             }
@@ -118,7 +192,11 @@ fun CatalogScreen(vm: MainViewModel) {
     val packageWorks by vm.packageWorks.collectAsStateWithLifecycle()
     val workMaterials by vm.workMaterials.collectAsStateWithLifecycle()
     val priceHistory by vm.priceHistory.collectAsStateWithLifecycle()
-    var tab by remember { mutableStateOf("Roboty") }
+
+    var mode by remember { mutableStateOf("Roboty") }
+    var filter by remember { mutableStateOf("Wszystkie") }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    var query by remember { mutableStateOf("") }
     var addWork by remember { mutableStateOf(false) }
     var addMaterial by remember { mutableStateOf(false) }
     var addPackage by remember { mutableStateOf(false) }
@@ -127,60 +205,160 @@ fun CatalogScreen(vm: MainViewModel) {
     var linkWorkId by remember { mutableStateOf<Long?>(null) }
     var packageId by remember { mutableStateOf<Long?>(null) }
 
+    val categoryIcons: Map<String, ImageVector> = mapOf(
+        "Roboty ziemne" to Icons.Rounded.Agriculture,
+        "Fundamenty" to Icons.Rounded.Foundation,
+        "Ściany i murowanie" to Icons.Rounded.Wallpaper,
+        "Stropy i żelbet" to Icons.Rounded.GridOn,
+        "Dachy" to Icons.Rounded.Roofing,
+        "Izolacje i ocieplenia" to Icons.Rounded.Layers,
+        "Elewacje" to Icons.Rounded.House,
+        "Tynki i gładzie" to Icons.Rounded.FormatPaint,
+        "Malowanie" to Icons.Rounded.FormatPaint,
+        "Płyty GK" to Icons.Rounded.ViewQuilt,
+        "Posadzki i wylewki" to Icons.Rounded.Texture,
+        "Płytki i okładziny" to Icons.Rounded.GridView,
+        "Panele i podłogi" to Icons.Rounded.ViewWeek,
+        "Instalacje elektryczne" to Icons.Rounded.ElectricBolt,
+        "Instalacje sanitarne" to Icons.Rounded.Plumbing,
+        "Stolarka" to Icons.Rounded.Window,
+        "Kominy" to Icons.Rounded.Factory,
+        "Rozbiórki i bruzdy" to Icons.Rounded.Construction,
+        "Stawki r-g kosztorysowe" to Icons.Rounded.Calculate,
+        "Stawki godzinowe — rynek" to Icons.Rounded.Schedule,
+        "Ogrzewanie podłogowe" to Icons.Rounded.DeviceThermostat
+    )
+
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp),
+        Modifier.fillMaxSize().background(BudBg).verticalScroll(rememberScrollState()).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text("Baza", style = MaterialTheme.typography.headlineSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("Roboty", "Materiały", "Pakiety").forEach {
-                if (tab == it) Button(onClick = { tab = it }) { Text(it) }
-                else OutlinedButton(onClick = { tab = it }) { Text(it) }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (selectedCategory != null) {
+                    IconButton(onClick = { selectedCategory = null }) { Icon(Icons.Rounded.ArrowBack, "Wróć") }
+                }
+                Text(selectedCategory ?: "Roboty", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            }
+            Icon(Icons.Rounded.MoreVert, null, tint = BudMuted)
+        }
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Wszystkie", "Ulubione", "Moje").forEach { item ->
+                val active = filter == item
+                Surface(
+                    color = if (active) BudOrange else BudPanel2,
+                    shape = RoundedCornerShape(9.dp),
+                    modifier = Modifier.weight(1f).clickable { filter = item }
+                ) {
+                    Text(
+                        item,
+                        color = if (active) Color.Black else BudText,
+                        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.padding(vertical = 10.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
             }
         }
 
-        when (tab) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            leadingIcon = { Icon(Icons.Rounded.Search, null) },
+            label = { Text("Szukaj robót") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Roboty", "Materiały", "Pakiety").forEach {
+                if (mode == it) Button(onClick = { mode = it }, shape = RoundedCornerShape(9.dp)) { Text(it) }
+                else OutlinedButton(onClick = { mode = it }, shape = RoundedCornerShape(9.dp)) { Text(it) }
+            }
+        }
+
+        when (mode) {
             "Roboty" -> {
-                Button(onClick = { addWork = true }) { Text("+ Dodaj robotę") }
-                works.forEach { w ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(w.name, style = MaterialTheme.typography.titleMedium)
-                            Text("${w.category} • ${w.unit} • ${money(w.laborRate)}/${w.unit}")
-                            Text("Norma czasu: ${w.laborHoursPerUnit} h/${w.unit} • zapas ${w.defaultWastePct}%")
-                            val links = workMaterials.filter { it.workId == w.id }
-                            if (links.isNotEmpty()) {
-                                Text("Materiały:", style = MaterialTheme.typography.labelMedium)
-                                links.forEach { l ->
-                                    val m = materials.firstOrNull { it.id == l.materialId }
-                                    if (m != null) Text("• ${m.name}: ${l.qtyPerWorkUnit} ${m.unit}/${w.unit}")
+                if (selectedCategory == null) {
+                    val categories = works
+                        .filter { query.isBlank() || it.name.contains(query, true) || it.category.contains(query, true) }
+                        .groupBy { it.category }
+                        .toSortedMap()
+                    categories.forEach { (cat, list) ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = BudPanel),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().clickable { selectedCategory = cat }
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(categoryIcons[cat] ?: Icons.Rounded.Construction, null, tint = BudOrange, modifier = Modifier.size(28.dp))
+                                Spacer(Modifier.width(14.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(cat, fontWeight = FontWeight.SemiBold)
+                                    Text("${list.size} pozycji", color = BudMuted, style = MaterialTheme.typography.labelSmall)
                                 }
+                                Icon(Icons.Rounded.ChevronRight, null, tint = BudMuted)
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = { editWork = w }) { Text("Edytuj") }
-                                OutlinedButton(onClick = { linkWorkId = w.id }) { Text("+ materiał") }
-                                TextButton(onClick = { vm.deleteWork(w) }) { Text("Usuń") }
+                        }
+                    }
+                    Button(onClick = { addWork = true }, modifier = Modifier.fillMaxWidth()) { Text("+ Dodaj własną robotę") }
+                } else {
+                    val list = works.filter {
+                        it.category == selectedCategory &&
+                            (query.isBlank() || it.name.contains(query, true)) &&
+                            filter != "Ulubione"
+                    }
+                    if (filter == "Ulubione") {
+                        Text("Ulubione dodamy w kolejnym kroku. Ten filtr jest już przygotowany w wyglądzie.", color = BudMuted)
+                    } else {
+                        list.forEach { w ->
+                            Card(colors = CardDefaults.cardColors(containerColor = BudPanel), modifier = Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text(w.name, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                        Text(money(w.laborRate), color = BudOrange, fontWeight = FontWeight.Bold)
+                                    }
+                                    val range = if (w.laborRateLow > 0 && w.laborRateHigh > w.laborRateLow)
+                                        "Widełki: ${money(w.laborRateLow)}–${money(w.laborRateHigh)}/${w.unit}"
+                                    else "Stawka: ${money(w.laborRate)}/${w.unit}"
+                                    Text(range, color = BudMuted, style = MaterialTheme.typography.bodySmall)
+                                    if (w.priceYear > 0) {
+                                        Text("${w.priceRegion} • ${w.priceYear}${if (w.includesMaterial) " • z materiałem" else ""}", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    if (w.priceSource.isNotBlank()) Text(w.priceSource, color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                                    val links = workMaterials.filter { it.workId == w.id }
+                                    if (links.isNotEmpty()) {
+                                        Text("Materiały: " + links.joinToString { l ->
+                                            val m = materials.firstOrNull { it.id == l.materialId }
+                                            if (m != null) "${m.name} ${l.qtyPerWorkUnit} ${m.unit}/${w.unit}" else ""
+                                        }, color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        OutlinedButton(onClick = { editWork = w }) { Text("Edytuj") }
+                                        OutlinedButton(onClick = { linkWorkId = w.id }) { Text("+ materiał") }
+                                        TextButton(onClick = { vm.deleteWork(w) }) { Text("Usuń") }
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
+
             "Materiały" -> {
                 Button(onClick = { addMaterial = true }) { Text("+ Dodaj materiał") }
-                materials.forEach { m ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(m.name, style = MaterialTheme.typography.titleMedium)
-                            if (m.manufacturer.isNotBlank()) Text(m.manufacturer)
-                            Text("Tani ${money(m.priceBudget)} • Standard ${money(m.priceStandard)} • Premium ${money(m.pricePremium)} / ${m.unit}")
-                            Text("Stan: ${m.stockQty} ${m.unit}", style = MaterialTheme.typography.labelSmall)
+                materials.filter { query.isBlank() || it.name.contains(query, true) }.forEach { m ->
+                    Card(colors = CardDefaults.cardColors(containerColor = BudPanel), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(m.name, fontWeight = FontWeight.SemiBold)
+                            Text("Tani ${money(m.priceBudget)} • Standard ${money(m.priceStandard)} • Premium ${money(m.pricePremium)} / ${m.unit}", color = BudMuted)
+                            Text("Stan: ${m.stockQty} ${m.unit}", color = BudMuted, style = MaterialTheme.typography.labelSmall)
                             val history = priceHistory.filter { it.materialId == m.id }.take(3)
-                            if (history.isNotEmpty()) {
-                                Text("Historia cen:", style = MaterialTheme.typography.labelMedium)
-                                history.forEach { h ->
-                                    Text("• ${java.util.Date(h.changedAt)}: ${money(h.priceBudget)} / ${money(h.priceStandard)} / ${money(h.pricePremium)}", style = MaterialTheme.typography.labelSmall)
-                                }
-                            }
+                            if (history.isNotEmpty()) Text("Historia cen: ${history.size} ostatnie wpisy", color = BudMuted, style = MaterialTheme.typography.labelSmall)
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OutlinedButton(onClick = { editMaterial = m }) { Text("Edytuj") }
                                 TextButton(onClick = { vm.deleteMaterial(m) }) { Text("Usuń") }
@@ -189,13 +367,14 @@ fun CatalogScreen(vm: MainViewModel) {
                     }
                 }
             }
+
             else -> {
                 Button(onClick = { addPackage = true }) { Text("+ Dodaj pakiet") }
                 packages.forEach { p ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(p.name, style = MaterialTheme.typography.titleMedium)
-                            if (p.description.isNotBlank()) Text(p.description)
+                    Card(colors = CardDefaults.cardColors(containerColor = BudPanel), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text(p.name, fontWeight = FontWeight.SemiBold)
+                            if (p.description.isNotBlank()) Text(p.description, color = BudMuted)
                             packageWorks.filter { it.packageId == p.id }.sortedBy { it.position }.forEach { pw ->
                                 Text("• ${works.firstOrNull { it.id == pw.workId }?.name ?: "?"}")
                             }
@@ -208,25 +387,18 @@ fun CatalogScreen(vm: MainViewModel) {
     }
 
     if (addWork) {
-        WorkDialog(onDismiss = { addWork = false }) {
-            vm.addWork(it); addWork = false
-        }
+        WorkDialog(onDismiss = { addWork = false }) { vm.addWork(it); addWork = false }
     }
     editWork?.let { current ->
-        WorkDialog(current = current, onDismiss = { editWork = null }) {
-            vm.addWork(it); editWork = null
-        }
+        WorkDialog(current = current, onDismiss = { editWork = null }) { vm.addWork(it); editWork = null }
     }
     if (addMaterial) {
-        MaterialDialog(onDismiss = { addMaterial = false }) {
-            vm.addMaterial(it); addMaterial = false
-        }
+        MaterialDialog(onDismiss = { addMaterial = false }) { vm.addMaterial(it); addMaterial = false }
     }
     editMaterial?.let { current ->
-        MaterialDialog(current = current, onDismiss = { editMaterial = null }) {
-            vm.addMaterial(it); editMaterial = null
-        }
+        MaterialDialog(current = current, onDismiss = { editMaterial = null }) { vm.addMaterial(it); editMaterial = null }
     }
+
     if (addPackage) {
         var name by remember { mutableStateOf("") }
         var desc by remember { mutableStateOf("") }
@@ -257,9 +429,7 @@ fun CatalogScreen(vm: MainViewModel) {
             title = { Text("Materiał do roboty") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SimpleDropdown("Materiał", selected.toString(), materials.map { it.id.toString() to it.name }) {
-                        selected = it.toLongOrNull() ?: 0L
-                    }
+                    SimpleDropdown("Materiał", selected.toString(), materials.map { it.id.toString() to it.name }) { selected = it.toLongOrNull() ?: 0L }
                     NumberField("Zużycie na jednostkę roboty", qty, { qty = it })
                 }
             },
@@ -279,9 +449,7 @@ fun CatalogScreen(vm: MainViewModel) {
             onDismissRequest = { packageId = null },
             title = { Text("Dodaj robotę do pakietu") },
             text = {
-                SimpleDropdown("Robota", selected.toString(), works.map { it.id.toString() to it.name }) {
-                    selected = it.toLongOrNull() ?: 0L
-                }
+                SimpleDropdown("Robota", selected.toString(), works.map { it.id.toString() to it.name }) { selected = it.toLongOrNull() ?: 0L }
             },
             confirmButton = {
                 Button(onClick = {
