@@ -26,11 +26,10 @@ fun SimpleDropdown(
     label: String,
     value: String,
     options: List<Pair<String, String>>,
-    modifier: Modifier = Modifier,
     onSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Column(modifier) {
+    Column(Modifier) {
         Text(label, style = MaterialTheme.typography.labelSmall)
         Box {
             OutlinedButton(
