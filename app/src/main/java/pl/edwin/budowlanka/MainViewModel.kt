@@ -23,6 +23,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val sites = dao.observeSites().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val estimates = dao.observeEstimates().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val spaces = dao.observeSpaces().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val openings = dao.observeOpenings().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val estimateWorks = dao.observeEstimateWorks().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val crewMembers = dao.observeCrewMembers().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val estimateCrew = dao.observeEstimateCrew().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -148,12 +149,45 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun addClient(v: ClientEntity) = viewModelScope.launch { dao.upsertClient(v) }
+    fun addClientWithSite(client: ClientEntity, siteName: String, address: String) = viewModelScope.launch {
+        val clientId = dao.upsertClient(client)
+        if (address.isNotBlank()) {
+            dao.upsertSite(
+                SiteEntity(
+                    clientId = clientId,
+                    name = siteName.ifBlank { "Adres główny" },
+                    address = address
+                )
+            )
+        }
+    }
     fun addSite(v: SiteEntity) = viewModelScope.launch { dao.upsertSite(v) }
 
     fun addSpace(v: SpaceEntity) = viewModelScope.launch { dao.upsertSpace(v) }
     fun deleteSpace(v: SpaceEntity) = viewModelScope.launch { dao.deleteSpace(v) }
+
+    private suspend fun refreshOpeningArea(spaceId: Long) {
+        val space = dao.getSpace(spaceId) ?: return
+        val total = dao.allOpenings().filter { it.spaceId == spaceId }.sumOf { it.area() }
+        dao.upsertSpace(space.copy(openingsArea = total))
+    }
+
+    fun addOpening(v: OpeningEntity) = viewModelScope.launch {
+        dao.upsertOpening(v)
+        refreshOpeningArea(v.spaceId)
+    }
+
+    fun deleteOpening(v: OpeningEntity) = viewModelScope.launch {
+        dao.deleteOpening(v)
+        refreshOpeningArea(v.spaceId)
+    }
+
     fun duplicateSpace(v: SpaceEntity) = viewModelScope.launch {
-        dao.upsertSpace(v.copy(id = 0, name = v.name + " — kopia"))
+        val newId = dao.upsertSpace(v.copy(id = 0, name = v.name + " — kopia"))
+        dao.allOpenings().filter { it.spaceId == v.id }.forEach { opening ->
+            dao.upsertOpening(opening.copy(id = 0, spaceId = newId))
+        }
+        refreshOpeningArea(newId)
     }
 
     fun addEstimateWork(v: EstimateWorkEntity) = viewModelScope.launch { dao.upsertEstimateWork(v) }
