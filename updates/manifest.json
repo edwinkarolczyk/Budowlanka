@@ -1,6 +1,6 @@
 {
-  "versionCode": 8,
-  "versionName": "0.5.3",
-  "changelog": "Stabilizacja i ergonomia kosztorysu: własna stawka dla konkretnej pozycji, wyszukiwanie robót przy dodawaniu, duplikowanie pozycji/pomieszczeń/całych kosztorysów, zaznaczanie wielu pozycji i usuwanie zbiorcze, edycja pomieszczeń oraz automatyczna kopia bazy przed migracją.",
+  "versionCode": 9,
+  "versionName": "0.5.4",
+  "changelog": "Mocniejsze i jednoznaczne zaznaczenia w całej aplikacji: aktywna dolna nawigacja, kroki kosztorysu, filtry, listy rozwijane, pola i zaznaczone pozycje. Katalog dostał filtry Wszystkie / Małopolskie 2026 / Moje, wybór ceny MIN / KATALOG / MAX / WŁASNA oraz nowe pakiety robót. Migracja bazy 3→4 zachowuje dane i wykonuje kopię przed aktualizacją.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
