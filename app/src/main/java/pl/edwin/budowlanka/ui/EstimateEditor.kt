@@ -572,30 +572,79 @@ private fun ResultSummary(r: EstimateResult) {
 }
 
 @Composable
-private fun MeasurementsTab(vm: MainViewModel, e: EstimateEntity, spaces: List<SpaceEntity>) {
+private fun MeasurementsTab(
+    vm: MainViewModel,
+    e: EstimateEntity,
+    spaces: List<SpaceEntity>,
+    openings: List<OpeningEntity>
+) {
     var showAdd by remember { mutableStateOf(false) }
     var edit by remember { mutableStateOf<SpaceEntity?>(null) }
+    var openingSpaceId by remember { mutableStateOf<Long?>(null) }
+    var editOpening by remember { mutableStateOf<OpeningEntity?>(null) }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Pomieszczenia / strefy", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("2. Wymiary", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Button(onClick = { showAdd = true }) { Text("+ Pomieszczenie") }
         }
-        Text("Okna i drzwi wpisujesz jako łączną powierzchnię otworów — są odejmowane od ścian.", color = BudMuted)
+
+        Text(
+            "Dodaj pomieszczenie, a potem każde okno i drzwi osobno. Aplikacja sama odejmie ich powierzchnię od ścian.",
+            color = BudMuted
+        )
 
         spaces.forEach { s ->
+            val roomOpenings = openings.filter { it.spaceId == s.id }
             Card(colors = CardDefaults.cardColors(containerColor = BudPanel), modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text("${s.level} • ${s.name}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text("${s.length} × ${s.width} × h ${s.height} m", color = BudMuted)
                     Text("Podłoga/sufit: ${"%.2f".format(s.floorArea())} m²")
                     Text("Ściany po odjęciu otworów: ${"%.2f".format(s.wallArea())} m²")
-                    Text("Otwory: ${s.openingsArea} m²", color = BudMuted)
+                    Text("Otwory razem: ${"%.2f".format(s.openingsArea)} m²", color = BudSelectedStrong)
+
+                    if (roomOpenings.isNotEmpty()) {
+                        HorizontalDivider(color = BudLine)
+                        roomOpenings.forEach { o ->
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        "${o.type}: ${o.name.ifBlank { o.type }}",
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        "${o.quantity} × ${o.width} × ${o.height} m = ${"%.2f".format(o.area())} m²",
+                                        color = BudMuted,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                TextButton(onClick = { editOpening = o }) { Text("Edytuj") }
+                                TextButton(onClick = { vm.deleteOpening(o) }) { Text("Usuń") }
+                            }
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { openingSpaceId = s.id },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("+ Okno / drzwi")
+                    }
+
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedButton(onClick = { edit = s }) { Text("Edytuj") }
+                        OutlinedButton(onClick = { edit = s }) { Text("Edytuj pokój") }
                         OutlinedButton(onClick = { vm.duplicateSpace(s) }) { Text("Duplikuj") }
                         TextButton(onClick = { vm.deleteSpace(s) }) { Text("Usuń") }
                     }
@@ -627,6 +676,30 @@ private fun MeasurementsTab(vm: MainViewModel, e: EstimateEntity, spaces: List<S
             }
         )
     }
+
+    openingSpaceId?.let { sid ->
+        OpeningDialog(
+            spaceId = sid,
+            current = null,
+            onDismiss = { openingSpaceId = null },
+            onSave = {
+                vm.addOpening(it)
+                openingSpaceId = null
+            }
+        )
+    }
+
+    editOpening?.let { current ->
+        OpeningDialog(
+            spaceId = current.spaceId,
+            current = current,
+            onDismiss = { editOpening = null },
+            onSave = {
+                vm.addOpening(it)
+                editOpening = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -641,19 +714,18 @@ private fun SpaceDialog(
     var l by remember(current) { mutableStateOf(current?.length ?: 0.0) }
     var w by remember(current) { mutableStateOf(current?.width ?: 0.0) }
     var h by remember(current) { mutableStateOf(current?.height ?: 2.6) }
-    var openings by remember(current) { mutableStateOf(current?.openingsArea ?: 0.0) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (current == null) "Nowe pomieszczenie" else "Edytuj pomieszczenie") },
+        title = { Text(if (current == null) "Pomieszczenie" else "Edytuj pomieszczenie") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedTextField(level, { level = it }, label = { Text("Poziom / strefa") })
-                OutlinedTextField(name, { name = it }, label = { Text("Nazwa") })
-                NumberField("Długość [m]", l, { l = it })
-                NumberField("Szerokość [m]", w, { w = it })
-                NumberField("Wysokość [m]", h, { h = it })
-                NumberField("Okna + drzwi [m²]", openings, { openings = it })
+                OutlinedTextField(level, { level = it }, label = { Text("Poziom / strefa") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it }, label = { Text("Nazwa") }, modifier = Modifier.fillMaxWidth())
+                NumberField("Długość [m]", l, { l = it }, Modifier.fillMaxWidth())
+                NumberField("Szerokość [m]", w, { w = it }, Modifier.fillMaxWidth())
+                NumberField("Wysokość [m]", h, { h = it }, Modifier.fillMaxWidth())
+                Text("Okna i drzwi dodasz osobno po zapisaniu pomieszczenia.", color = BudMuted)
             }
         },
         confirmButton = {
@@ -667,7 +739,61 @@ private fun SpaceDialog(
                         length = l,
                         width = w,
                         height = h,
-                        openingsArea = openings
+                        openingsArea = current?.openingsArea ?: 0.0
+                    )
+                )
+            }) { Text(if (current == null) "Dodaj" else "Zapisz") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
+    )
+}
+
+@Composable
+private fun OpeningDialog(
+    spaceId: Long,
+    current: OpeningEntity?,
+    onDismiss: () -> Unit,
+    onSave: (OpeningEntity) -> Unit
+) {
+    var type by remember(current) { mutableStateOf(current?.type ?: OpeningType.WINDOW) }
+    var name by remember(current) { mutableStateOf(current?.name ?: "") }
+    var width by remember(current) { mutableStateOf(current?.width ?: 0.0) }
+    var height by remember(current) { mutableStateOf(current?.height ?: 0.0) }
+    var quantity by remember(current) { mutableStateOf(current?.quantity ?: 1) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (current == null) "Dodaj okno / drzwi" else "Edytuj otwór") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SimpleDropdown("Typ", type, OpeningType.all.map { it to it }) { type = it }
+                OutlinedTextField(
+                    name,
+                    { name = it },
+                    label = { Text("Nazwa, np. okno balkonowe") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                NumberField("Szerokość [m]", width, { width = it }, Modifier.fillMaxWidth())
+                NumberField("Wysokość [m]", height, { height = it }, Modifier.fillMaxWidth())
+                IntField("Ilość takich samych", quantity, { quantity = it.coerceAtLeast(1) }, Modifier.fillMaxWidth())
+                Text(
+                    "Powierzchnia: ${"%.2f".format(width * height * quantity.coerceAtLeast(1))} m²",
+                    color = BudSelectedStrong,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                onSave(
+                    OpeningEntity(
+                        id = current?.id ?: 0L,
+                        spaceId = spaceId,
+                        type = type,
+                        name = name,
+                        width = width,
+                        height = height,
+                        quantity = quantity.coerceAtLeast(1)
                     )
                 )
             }) { Text("Zapisz") }
