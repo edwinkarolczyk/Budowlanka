@@ -469,8 +469,14 @@ private fun WorkDialog(current: WorkEntity? = null, onDismiss: () -> Unit, onSav
     var category by remember(current) { mutableStateOf(current?.category ?: "Ogólne") }
     var unit by remember(current) { mutableStateOf(current?.unit ?: "m²") }
     var rate by remember(current) { mutableStateOf(current?.laborRate ?: 0.0) }
+    var low by remember(current) { mutableStateOf(current?.laborRateLow ?: 0.0) }
+    var high by remember(current) { mutableStateOf(current?.laborRateHigh ?: 0.0) }
     var hours by remember(current) { mutableStateOf(current?.laborHoursPerUnit ?: 0.0) }
     var waste by remember(current) { mutableStateOf(current?.defaultWastePct ?: 10.0) }
+    var region by remember(current) { mutableStateOf(current?.priceRegion ?: "") }
+    var year by remember(current) { mutableStateOf(current?.priceYear ?: 0) }
+    var source by remember(current) { mutableStateOf(current?.priceSource ?: "") }
+    var includesMaterial by remember(current) { mutableStateOf(current?.includesMaterial ?: false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nowa robota") },
@@ -479,14 +485,40 @@ private fun WorkDialog(current: WorkEntity? = null, onDismiss: () -> Unit, onSav
                 OutlinedTextField(name, { name = it }, label = { Text("Nazwa") })
                 OutlinedTextField(category, { category = it }, label = { Text("Kategoria") })
                 OutlinedTextField(unit, { unit = it }, label = { Text("Jednostka") })
-                NumberField("Robocizna za jednostkę", rate, { rate = it })
+                NumberField("Stawka domyślna", rate, { rate = it })
+                NumberField("Widełki od", low, { low = it })
+                NumberField("Widełki do", high, { high = it })
                 NumberField("Roboczogodziny / jednostkę", hours, { hours = it })
                 NumberField("Domyślny zapas %", waste, { waste = it })
+                OutlinedTextField(region, { region = it }, label = { Text("Region cennika") })
+                IntField("Rok cennika", year, { year = it })
+                OutlinedTextField(source, { source = it }, label = { Text("Źródło / uwagi") })
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(includesMaterial, { includesMaterial = it })
+                    Text("Cena obejmuje materiał")
+                }
             }
         },
         confirmButton = {
             Button(onClick = {
-                onSave(WorkEntity(id = current?.id ?: 0L, name = name.ifBlank { "Nowa robota" }, category = category, unit = unit, laborRate = rate, laborHoursPerUnit = hours, defaultWastePct = waste, active = current?.active ?: true))
+                onSave(
+                    WorkEntity(
+                        id = current?.id ?: 0L,
+                        name = name.ifBlank { "Nowa robota" },
+                        category = category,
+                        unit = unit,
+                        laborRate = rate,
+                        laborRateLow = low,
+                        laborRateHigh = high,
+                        laborHoursPerUnit = hours,
+                        defaultWastePct = waste,
+                        priceRegion = region,
+                        priceYear = year,
+                        priceSource = source,
+                        includesMaterial = includesMaterial,
+                        active = current?.active ?: true
+                    )
+                )
             }) { Text("Zapisz") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
