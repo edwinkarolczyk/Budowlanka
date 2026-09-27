@@ -17,7 +17,7 @@ object BackupManager {
     }
     private fun arr(items: List<JSONObject>) = JSONArray(items)
 
-    suspend fun shareBackup(context: Context, dao: AppDao) {
+    suspend fun buildSnapshot(dao: AppDao): JSONObject {
         val root = JSONObject()
         root.put("format", "budowlanka-backup-0.5")
         root.put("createdAt", System.currentTimeMillis())
@@ -37,7 +37,8 @@ object BackupManager {
             "defaultWastePct" to w.defaultWastePct, "priceRegion" to w.priceRegion,
             "priceYear" to w.priceYear, "priceSource" to w.priceSource,
             "includesMaterial" to w.includesMaterial, "isFavorite" to w.isFavorite,
-            "isUserDefined" to w.isUserDefined, "active" to w.active
+            "isUserDefined" to w.isUserDefined, "active" to w.active,
+            "defaultQuantitySource" to w.defaultQuantitySource
         ) }))
         root.put("materials", arr(dao.allMaterials().map { m -> obj(
             "id" to m.id, "name" to m.name, "unit" to m.unit, "manufacturer" to m.manufacturer,
@@ -123,6 +124,22 @@ object BackupManager {
             "estimateWorkId" to x.estimateWorkId, "uri" to x.uri, "caption" to x.caption
         ) }))
 
+        root.put("workSessions", arr(dao.allWorkSessions().map { x -> obj(
+            "id" to x.id, "estimateId" to x.estimateId, "crewMemberId" to x.crewMemberId,
+            "type" to x.type, "startAt" to x.startAt, "endAt" to x.endAt,
+            "endReason" to x.endReason, "createdAt" to x.createdAt, "updatedAt" to x.updatedAt
+        ) }))
+        root.put("workSessionEvents", arr(dao.allWorkSessionEvents().map { x -> obj(
+            "id" to x.id, "estimateId" to x.estimateId, "sessionId" to x.sessionId,
+            "crewMemberId" to x.crewMemberId, "eventType" to x.eventType,
+            "at" to x.at, "note" to x.note
+        ) }))
+        return root
+    }
+
+    suspend fun shareBackup(context: Context, dao: AppDao) {
+        val root = buildSnapshot(dao)
+        val photos = dao.allPhotos()
         val zip = File(context.cacheDir, "Budowlanka_backup_${System.currentTimeMillis()}.zip")
         ZipOutputStream(FileOutputStream(zip)).use { zos ->
             zos.putNextEntry(ZipEntry("backup.json"))
