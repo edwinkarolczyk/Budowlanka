@@ -13,6 +13,16 @@ Androidowa aplikacja offline-first do wycen robót budowlanych. Nazwa produktu j
 - praktyczne pakiety robót: malowanie, gładź+malowanie, łazienka, dach i elewacja,
 - migracja Room 3→4 bez kasowania danych i automatyczna kopia bazy przed migracją.
 
+### 0.5.4 — czytelne zaznaczenia i katalog Małopolskie 2026
+- wyraźniejszy stan zaznaczenia w całej aplikacji: jaśniejszy bursztynowy akcent, mocniejsze obramowanie i tło,
+- mocniej widoczny aktywny element dolnej nawigacji, krok kosztorysu, filtr, checkbox, dropdown i aktywne pole,
+- katalog robót uporządkowany kategoriami z działającymi filtrami „Wszystkie / Ulubione / Moje”,
+- możliwość oznaczania robót gwiazdką jako ulubione,
+- własne pozycje katalogu są rozpoznawane osobno,
+- wszystkie przekazane stawki Małopolskie 2025/2026 pozostają w katalogu z regionem, rokiem, źródłem oraz widełkami,
+- edycja roboty jest skrócona; normy, źródło i parametry zaawansowane można rozwinąć,
+- migracje Room są liniowe do schematu v5 i przed migracją wykonywana jest lokalna kopia bazy.
+
 ### 0.5.3 — ergonomia i bezpieczeństwo
 - własna stawka robocizny dla konkretnej pozycji kosztorysu bez zmiany katalogu,
 - czytelne: ilość × cena jednostkowa = wartość robocizny,
