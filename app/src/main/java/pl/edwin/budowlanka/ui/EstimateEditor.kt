@@ -567,6 +567,7 @@ private fun RealizationTab(
     settings: AppSettingsEntity?
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val active = e.status == EstimateStatus.ACCEPTED || e.status == EstimateStatus.IN_PROGRESS || e.status == EstimateStatus.DONE
     var photoSpaceId by remember { mutableStateOf(0L) }
     var photoWorkId by remember { mutableStateOf(0L) }
