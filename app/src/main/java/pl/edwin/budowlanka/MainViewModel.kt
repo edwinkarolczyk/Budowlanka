@@ -80,6 +80,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             spaceMap[old.id] = copiedId
         }
 
+        dao.allOpenings().filter { it.spaceId in spaceMap.keys }.forEach { old ->
+            spaceMap[old.spaceId]?.let { newSpaceId ->
+                dao.upsertOpening(old.copy(id = 0, spaceId = newSpaceId))
+            }
+        }
+
         dao.allEstimateWorks().filter { it.estimateId == sourceId }.forEach { old ->
             dao.upsertEstimateWork(
                 old.copy(
