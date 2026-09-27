@@ -1,6 +1,6 @@
 {
-  "versionCode": 13,
-  "versionName": "0.5.8",
-  "changelog": "Rozbudowany panel PC tylko do odczytu: Pulpit z alertami, pełne karty zleceń i kosztorysów, klienci z historią, czas pracy i aktywne liczniki, kalendarz z wykrywaniem kolizji, katalog robót/materiałów/narzędzi, szczegóły synchronizacji oraz eksport JSON i CSV. Kierunek danych pozostaje Telefon → PC.",
+  "versionCode": 14,
+  "versionName": "0.5.9",
+  "changelog": "Nowa główna ikona aplikacji Budowlanka: dom + miarka w czarno-pomarańczowym stylu. Dodano poprawną obsługę launchera Android, w tym ikonę standardową, okrągłą i adaptacyjną. Bez zmian w danych i funkcjach aplikacji.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
