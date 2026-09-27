@@ -62,8 +62,7 @@ fun SimpleDropdown(
             }
             DropdownMenu(
                 expanded = expanded,
-                onDismissRequest = { expanded = false },
-                containerColor = BudPanel2
+                onDismissRequest = { expanded = false }
             ) {
                 options.forEach { (k, text) ->
                     val selected = k == value
