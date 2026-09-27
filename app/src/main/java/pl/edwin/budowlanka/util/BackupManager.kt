@@ -84,7 +84,8 @@ object BackupManager {
         root.put("estimateWorks", arr(dao.allEstimateWorks().map { x -> obj(
             "id" to x.id, "estimateId" to x.estimateId, "workId" to x.workId, "spaceId" to x.spaceId,
             "quantity" to x.quantity, "quantitySource" to x.quantitySource,
-            "materialTier" to x.materialTier, "wastePctOverride" to x.wastePctOverride
+            "materialTier" to x.materialTier, "wastePctOverride" to x.wastePctOverride,
+            "laborRateOverride" to x.laborRateOverride
         ) }))
         root.put("crewMembers", arr(dao.allCrewMembers().map { c -> obj(
             "id" to c.id, "name" to c.name, "defaultPayMode" to c.defaultPayMode,
