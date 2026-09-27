@@ -117,6 +117,7 @@ fun CatalogScreen(vm: MainViewModel) {
     val packages by vm.packages.collectAsStateWithLifecycle()
     val packageWorks by vm.packageWorks.collectAsStateWithLifecycle()
     val workMaterials by vm.workMaterials.collectAsStateWithLifecycle()
+    val priceHistory by vm.priceHistory.collectAsStateWithLifecycle()
     var tab by remember { mutableStateOf("Roboty") }
     var addWork by remember { mutableStateOf(false) }
     var addMaterial by remember { mutableStateOf(false) }
@@ -173,6 +174,13 @@ fun CatalogScreen(vm: MainViewModel) {
                             if (m.manufacturer.isNotBlank()) Text(m.manufacturer)
                             Text("Tani ${money(m.priceBudget)} • Standard ${money(m.priceStandard)} • Premium ${money(m.pricePremium)} / ${m.unit}")
                             Text("Stan: ${m.stockQty} ${m.unit}", style = MaterialTheme.typography.labelSmall)
+                            val history = priceHistory.filter { it.materialId == m.id }.take(3)
+                            if (history.isNotEmpty()) {
+                                Text("Historia cen:", style = MaterialTheme.typography.labelMedium)
+                                history.forEach { h ->
+                                    Text("• ${java.util.Date(h.changedAt)}: ${money(h.priceBudget)} / ${money(h.priceStandard)} / ${money(h.pricePremium)}", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OutlinedButton(onClick = { editMaterial = m }) { Text("Edytuj") }
                                 TextButton(onClick = { vm.deleteMaterial(m) }) { Text("Usuń") }
