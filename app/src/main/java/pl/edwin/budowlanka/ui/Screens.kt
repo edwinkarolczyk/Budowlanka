@@ -674,6 +674,8 @@ fun ClientsScreen(vm: MainViewModel) {
         var phone by remember { mutableStateOf("") }
         var email by remember { mutableStateOf("") }
         var notes by remember { mutableStateOf("") }
+        var siteName by remember { mutableStateOf("Adres główny") }
+        var address by remember { mutableStateOf("") }
         var discount by remember { mutableStateOf(0.0) }
         AlertDialog(
             onDismissRequest = { addClient = false },
@@ -684,12 +686,24 @@ fun ClientsScreen(vm: MainViewModel) {
                     OutlinedTextField(phone, { phone = it }, label = { Text("Telefon") })
                     OutlinedTextField(email, { email = it }, label = { Text("E-mail") })
                     OutlinedTextField(notes, { notes = it }, label = { Text("Notatki") })
+                    OutlinedTextField(siteName, { siteName = it }, label = { Text("Nazwa miejsca") })
+                    OutlinedTextField(address, { address = it }, label = { Text("Adres realizacji") })
                     NumberField("Własny rabat stały %", discount, { discount = it })
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    vm.addClient(ClientEntity(name = name.ifBlank { "Klient" }, phone = phone, email = email, notes = notes, loyaltyDiscountPct = discount))
+                    vm.addClientWithSite(
+                        ClientEntity(
+                            name = name.ifBlank { "Klient" },
+                            phone = phone,
+                            email = email,
+                            notes = notes,
+                            loyaltyDiscountPct = discount
+                        ),
+                        siteName,
+                        address
+                    )
                     addClient = false
                 }) { Text("Zapisz") }
             },
