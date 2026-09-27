@@ -90,7 +90,7 @@ fun BudowlankaRoot(vm: MainViewModel) {
                                 color = BudText,
                                 style = MaterialTheme.typography.titleLarge
                             )
-                            Text("v0.5.3", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                            Text("v0.5.4", color = BudMuted, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                     IconButton(onClick = { screenName = RootScreen.SETTINGS.name }) {
@@ -110,20 +110,21 @@ fun BudowlankaRoot(vm: MainViewModel) {
                             Icon(
                                 icon,
                                 contentDescription = label,
-                                tint = if (selected) BudOrange else BudMuted
+                                tint = if (selected) Color.Black else BudMuted
                             )
                         },
                         label = {
                             Text(
                                 label,
-                                color = if (selected) BudOrange else BudMuted,
+                                color = if (selected) BudOrangeLight else BudMuted,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                                 style = MaterialTheme.typography.labelSmall
                             )
                         },
                         colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = Color.Transparent,
-                            selectedIconColor = BudOrange,
-                            selectedTextColor = BudOrange,
+                            indicatorColor = BudOrangeStrong,
+                            selectedIconColor = Color.Black,
+                            selectedTextColor = BudOrangeLight,
                             unselectedIconColor = BudMuted,
                             unselectedTextColor = BudMuted
                         )
