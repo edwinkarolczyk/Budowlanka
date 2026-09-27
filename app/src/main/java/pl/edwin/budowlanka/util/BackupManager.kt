@@ -111,7 +111,7 @@ object BackupManager {
         val photos = dao.allPhotos()
         root.put("photos", arr(photos.map { x -> obj(
             "id" to x.id, "estimateId" to x.estimateId, "spaceId" to x.spaceId,
-            "uri" to x.uri, "caption" to x.caption
+            "estimateWorkId" to x.estimateWorkId, "uri" to x.uri, "caption" to x.caption
         ) }))
 
         val zip = File(context.cacheDir, "Budowlanka_backup_${System.currentTimeMillis()}.zip")
