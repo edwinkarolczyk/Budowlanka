@@ -47,6 +47,10 @@ interface AppDao {
     fun observePriceHistory(): Flow<List<MaterialPriceHistoryEntity>>
     @Query("SELECT * FROM app_settings WHERE id=1")
     fun observeSettings(): Flow<AppSettingsEntity?>
+    @Query("SELECT * FROM work_sessions ORDER BY startAt DESC")
+    fun observeWorkSessions(): Flow<List<WorkSessionEntity>>
+    @Query("SELECT * FROM work_session_events ORDER BY at DESC")
+    fun observeWorkSessionEvents(): Flow<List<WorkSessionEventEntity>>
 
     @Query("SELECT COUNT(*) FROM works")
     suspend fun countWorks(): Int
@@ -72,6 +76,8 @@ interface AppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertToolChecklist(v: ToolChecklistEntity)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertPriceHistory(v: MaterialPriceHistoryEntity): Long
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertSettings(v: AppSettingsEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertWorkSession(v: WorkSessionEntity): Long
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertWorkSessionEvent(v: WorkSessionEventEntity): Long
 
     @Delete suspend fun deleteWork(v: WorkEntity)
     @Delete suspend fun deleteMaterial(v: MaterialEntity)
@@ -92,6 +98,15 @@ interface AppDao {
     suspend fun clearToolChecklist(estimateId: Long)
     @Query("DELETE FROM estimate_crew WHERE estimateId=:estimateId AND crewMemberId=:crewMemberId")
     suspend fun removeCrewFromEstimate(estimateId: Long, crewMemberId: Long)
+
+    @Query("SELECT * FROM work_sessions WHERE estimateId=:estimateId AND endAt IS NULL ORDER BY startAt")
+    suspend fun activeWorkSessions(estimateId: Long): List<WorkSessionEntity>
+
+    @Query("SELECT * FROM work_sessions WHERE endAt IS NULL ORDER BY startAt")
+    suspend fun allActiveWorkSessions(): List<WorkSessionEntity>
+
+    @Query("UPDATE work_sessions SET endAt=:endAt, endReason=:endReason, updatedAt=:endAt WHERE estimateId=:estimateId AND endAt IS NULL")
+    suspend fun stopActiveWorkSessions(estimateId: Long, endAt: Long, endReason: String)
 
     @Query("SELECT * FROM estimates WHERE id=:id LIMIT 1")
     suspend fun getEstimate(id: Long): EstimateEntity?
@@ -124,4 +139,6 @@ interface AppDao {
     @Query("SELECT * FROM shopping_items") suspend fun allShopping(): List<ShoppingItemEntity>
     @Query("SELECT * FROM tool_checklist") suspend fun allToolChecklist(): List<ToolChecklistEntity>
     @Query("SELECT * FROM material_price_history") suspend fun allPriceHistory(): List<MaterialPriceHistoryEntity>
+    @Query("SELECT * FROM work_sessions") suspend fun allWorkSessions(): List<WorkSessionEntity>
+    @Query("SELECT * FROM work_session_events") suspend fun allWorkSessionEvents(): List<WorkSessionEventEntity>
 }

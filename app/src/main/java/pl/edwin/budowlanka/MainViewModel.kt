@@ -6,8 +6,11 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import pl.edwin.budowlanka.data.*
 import pl.edwin.budowlanka.domain.EstimateCalculator
+import pl.edwin.budowlanka.util.WorkTimerNotifications
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     val dao = (app as BudowlankaApp).database.dao()
@@ -32,7 +35,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val shopping = dao.observeShopping().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val toolChecklist = dao.observeToolChecklist().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val priceHistory = dao.observePriceHistory().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val workSessions = dao.observeWorkSessions().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val workSessionEvents = dao.observeWorkSessionEvents().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val settings = dao.observeSettings().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private val workTimerMutex = Mutex()
 
     init {
         viewModelScope.launch { dao.ensureSeedData() }
@@ -254,6 +261,88 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setToolPacked(item: ToolChecklistEntity, packed: Boolean) = viewModelScope.launch {
         dao.upsertToolChecklist(item.copy(packed = packed))
+    }
+
+    fun startWork(
+        estimateId: Long,
+        type: String = WorkTimeType.WORK,
+        crewIds: List<Long>? = null
+    ) = viewModelScope.launch {
+        workTimerMutex.withLock {
+            if (dao.activeWorkSessions(estimateId).isNotEmpty()) return@withLock
+
+            val estimate = dao.getEstimate(estimateId) ?: return@withLock
+            val assigned = crewIds ?: dao.allEstimateCrew()
+                .filter { it.estimateId == estimateId }
+                .map { it.crewMemberId }
+
+            val workers: List<Long?> = assigned.distinct().map { it as Long? }
+                .ifEmpty { listOf(null) }
+            val now = System.currentTimeMillis()
+
+            workers.forEach { crewId ->
+                val sessionId = dao.upsertWorkSession(
+                    WorkSessionEntity(
+                        estimateId = estimateId,
+                        crewMemberId = crewId,
+                        type = type,
+                        startAt = now,
+                        createdAt = now,
+                        updatedAt = now
+                    )
+                )
+                dao.upsertWorkSessionEvent(
+                    WorkSessionEventEntity(
+                        estimateId = estimateId,
+                        sessionId = sessionId,
+                        crewMemberId = crewId,
+                        eventType = WorkSessionEventType.START,
+                        at = now,
+                        note = WorkTimeType.label(type)
+                    )
+                )
+            }
+
+            if (estimate.status == EstimateStatus.ACCEPTED) {
+                dao.upsertEstimate(estimate.copy(status = EstimateStatus.IN_PROGRESS))
+            }
+
+            WorkTimerNotifications.show(
+                context = getApplication(),
+                estimateId = estimateId,
+                estimateTitle = estimate.title,
+                startAt = now,
+                crewCount = workers.size,
+                workType = type
+            )
+        }
+    }
+
+    fun stopWork(estimateId: Long, reason: String = WorkEndReason.STOP) = viewModelScope.launch {
+        workTimerMutex.withLock {
+            val active = dao.activeWorkSessions(estimateId)
+            if (active.isEmpty()) {
+                WorkTimerNotifications.cancel(getApplication(), estimateId)
+                return@withLock
+            }
+
+            val now = System.currentTimeMillis()
+            dao.stopActiveWorkSessions(estimateId, now, reason)
+            val eventType = if (reason == WorkEndReason.PAUSE) WorkSessionEventType.PAUSE else WorkSessionEventType.STOP
+            active.forEach { session ->
+                dao.upsertWorkSessionEvent(
+                    WorkSessionEventEntity(
+                        estimateId = estimateId,
+                        sessionId = session.id,
+                        crewMemberId = session.crewMemberId,
+                        eventType = eventType,
+                        at = now,
+                        note = WorkTimeType.label(session.type)
+                    )
+                )
+            }
+            WorkTimerNotifications.cancel(getApplication(), estimateId)
+        }
     }
 
     suspend fun syncFulfillment(estimateId: Long) {

@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import pl.edwin.budowlanka.BuildConfig
 import pl.edwin.budowlanka.MainViewModel
 import pl.edwin.budowlanka.util.UpdateChecker
 import pl.edwin.budowlanka.util.UpdateInfo
@@ -90,7 +91,7 @@ fun BudowlankaRoot(vm: MainViewModel) {
                                 color = BudText,
                                 style = MaterialTheme.typography.titleLarge
                             )
-                            Text("v0.5.5", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                            Text("v${BuildConfig.VERSION_NAME}", color = BudMuted, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                     IconButton(onClick = { screenName = RootScreen.SETTINGS.name }) {

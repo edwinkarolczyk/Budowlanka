@@ -12,8 +12,8 @@ android {
         applicationId = "pl.edwin.budowlanka.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 10
-        versionName = "0.5.5"
+        versionCode = 11
+        versionName = "0.5.6"
     }
 
     signingConfigs {

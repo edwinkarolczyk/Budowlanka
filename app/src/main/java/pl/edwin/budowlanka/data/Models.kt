@@ -313,3 +313,59 @@ data class AppSettingsEntity(
     val defaultKmRate: Double = 1.15,
     val defaultFixedTravelFee: Double = 0.0
 )
+
+
+object WorkTimeType {
+    const val WORK = "PRACA"
+    const val TRAVEL = "DOJAZD"
+    const val BREAK = "PRZERWA"
+    const val SUPPLY = "ZAOPATRZENIE"
+    val all = listOf(WORK, TRAVEL, BREAK, SUPPLY)
+
+    fun label(value: String): String = when (value) {
+        TRAVEL -> "Dojazd"
+        BREAK -> "Przerwa"
+        SUPPLY -> "Zakupy / zaopatrzenie"
+        else -> "Praca"
+    }
+}
+
+object WorkEndReason {
+    const val STOP = "STOP"
+    const val PAUSE = "PAUZA"
+    const val CORRECTION = "KOREKTA"
+}
+
+object WorkSessionEventType {
+    const val START = "START"
+    const val STOP = "STOP"
+    const val PAUSE = "PAUZA"
+    const val CORRECTION = "KOREKTA"
+}
+
+@Entity(tableName = "work_sessions")
+data class WorkSessionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val estimateId: Long,
+    val crewMemberId: Long? = null,
+    val type: String = WorkTimeType.WORK,
+    val startAt: Long = System.currentTimeMillis(),
+    val endAt: Long? = null,
+    val endReason: String = "",
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+) {
+    fun durationMillis(now: Long = System.currentTimeMillis()): Long =
+        ((endAt ?: now) - startAt).coerceAtLeast(0L)
+}
+
+@Entity(tableName = "work_session_events")
+data class WorkSessionEventEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val estimateId: Long,
+    val sessionId: Long? = null,
+    val crewMemberId: Long? = null,
+    val eventType: String,
+    val at: Long = System.currentTimeMillis(),
+    val note: String = ""
+)

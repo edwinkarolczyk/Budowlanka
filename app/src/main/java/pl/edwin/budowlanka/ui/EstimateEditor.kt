@@ -1,6 +1,9 @@
 package pl.edwin.budowlanka.ui
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -9,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.core.content.ContextCompat
 import pl.edwin.budowlanka.MainViewModel
 import pl.edwin.budowlanka.data.*
 import pl.edwin.budowlanka.domain.EstimateCalculator
@@ -35,6 +40,7 @@ import pl.edwin.budowlanka.domain.SchedulePlanner
 import pl.edwin.budowlanka.util.PdfExporter
 import pl.edwin.budowlanka.util.PdfPayload
 import pl.edwin.budowlanka.util.RouteCalculator
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
 
@@ -454,6 +460,32 @@ private fun ValuationStep(
     val suggestedDiscount = maxOf(client?.loyaltyDiscountPct ?: 0.0, historySuggestion)
     var showExtra by remember { mutableStateOf(false) }
     var showRealization by remember { mutableStateOf(false) }
+    var showStartOptions by remember { mutableStateOf(false) }
+    var showStopOptions by remember { mutableStateOf(false) }
+
+    val allTimerSessions by vm.workSessions.collectAsStateWithLifecycle()
+    val timerSessions = allTimerSessions.filter { it.estimateId == e.id }
+    val activeTimerSessions = timerSessions.filter { it.endAt == null }
+    var timerNow by remember { mutableStateOf(System.currentTimeMillis()) }
+    val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+
+    LaunchedEffect(activeTimerSessions.map { it.id }) {
+        while (activeTimerSessions.isNotEmpty()) {
+            timerNow = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
+
+    fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     if (showRealization) {
         Column(Modifier.fillMaxSize()) {
@@ -472,6 +504,64 @@ private fun ValuationStep(
     ) {
         Text("5. Wycena końcowa", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text("Dopiero tutaj ustawiasz sposób wyceny, marże, rabat i finalną cenę dla klienta.", color = BudMuted)
+
+        Section("Czas pracy") {
+            val canRunTimer = e.status == EstimateStatus.ACCEPTED || e.status == EstimateStatus.IN_PROGRESS
+            val actualWorkHours = timerSessions
+                .filter { it.type == WorkTimeType.WORK }
+                .sumOf { it.durationMillis(timerNow) } / 3_600_000.0
+            val travelHours = timerSessions
+                .filter { it.type == WorkTimeType.TRAVEL }
+                .sumOf { it.durationMillis(timerNow) } / 3_600_000.0
+            val runningFrom = activeTimerSessions.minOfOrNull { it.startAt }
+
+            if (activeTimerSessions.isNotEmpty() && runningFrom != null) {
+                Text(
+                    "TRWA • ${formatElapsed(timerNow - runningFrom)}",
+                    color = BudGreen,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    "${activeTimerSessions.size} osoba/osób • ${WorkTimeType.label(activeTimerSessions.first().type)}",
+                    color = BudMuted
+                )
+                TimerGestureButton(
+                    label = "STOP • ${formatElapsed(timerNow - runningFrom)}",
+                    active = true,
+                    onTap = { vm.stopWork(e.id, WorkEndReason.STOP) },
+                    onLongPress = { showStopOptions = true }
+                )
+                Text("Przytrzymaj STOP: pauza lub zakończenie.", color = BudMuted, style = MaterialTheme.typography.bodySmall)
+            } else {
+                TimerGestureButton(
+                    label = "START PRACY",
+                    active = false,
+                    enabled = canRunTimer,
+                    onTap = {
+                        requestNotificationPermissionIfNeeded()
+                        vm.startWork(e.id)
+                    },
+                    onLongPress = {
+                        if (canRunTimer) showStartOptions = true
+                    }
+                )
+                if (!canRunTimer) {
+                    Text("Aby uruchomić czas, ustaw status ZAAKCEPTOWANA.", color = BudMuted)
+                } else {
+                    Text("Przytrzymaj START: wybierz ekipę i rodzaj czasu.", color = BudMuted, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            Text("Rzeczywista praca: ${"%.1f".format(actualWorkHours)} r-g")
+            Text("Dojazdy: ${"%.1f".format(travelHours)} r-g")
+            if (result.laborHours > 0.0) {
+                Text(
+                    "Plan: ${"%.1f".format(result.laborHours)} r-g • różnica: ${"%+.1f".format(actualWorkHours - result.laborHours)} r-g",
+                    color = BudMuted
+                )
+            }
+        }
 
         Section("Sposób wyceny") {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -526,6 +616,39 @@ private fun ValuationStep(
         }
     }
 
+    if (showStartOptions) {
+        WorkStartDialog(
+            crewMembers = crewMembers,
+            crew = crew,
+            onDismiss = { showStartOptions = false },
+            onStart = { type, crewIds ->
+                requestNotificationPermissionIfNeeded()
+                vm.startWork(e.id, type, crewIds)
+                showStartOptions = false
+            }
+        )
+    }
+
+    if (showStopOptions) {
+        AlertDialog(
+            onDismissRequest = { showStopOptions = false },
+            title = { Text("Zatrzymać licznik?") },
+            text = { Text("Pauza kończy bieżącą sesję. Kolejny START utworzy nową sesję i zachowa historię.") },
+            confirmButton = {
+                Button(onClick = {
+                    vm.stopWork(e.id, WorkEndReason.STOP)
+                    showStopOptions = false
+                }) { Text("STOP") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    vm.stopWork(e.id, WorkEndReason.PAUSE)
+                    showStopOptions = false
+                }) { Text("PAUZA") }
+            }
+        )
+    }
+
     if (showExtra) {
         var category by remember { mutableStateOf("Inne") }
         var desc by remember { mutableStateOf("") }
@@ -556,6 +679,103 @@ private fun ValuationStep(
             dismissButton = { TextButton(onClick = { showExtra = false }) { Text("Anuluj") } }
         )
     }
+}
+
+private fun formatElapsed(ms: Long): String {
+    val totalSeconds = (ms.coerceAtLeast(0L) / 1000L)
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return "%02d:%02d:%02d".format(hours, minutes, seconds)
+}
+
+@Composable
+private fun TimerGestureButton(
+    label: String,
+    active: Boolean,
+    enabled: Boolean = true,
+    onTap: () -> Unit,
+    onLongPress: () -> Unit
+) {
+    val background = when {
+        !enabled -> BudPanel2
+        active -> MaterialTheme.colorScheme.error
+        else -> BudOrangeStrong
+    }
+    val content = if (!enabled) BudMuted else Color.Black
+
+    Surface(
+        color = background,
+        contentColor = content,
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .pointerInput(enabled, active) {
+                detectTapGestures(
+                    onTap = { if (enabled) onTap() },
+                    onLongPress = { if (enabled) onLongPress() }
+                )
+            }
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(label, fontWeight = FontWeight.Bold, color = content)
+        }
+    }
+}
+
+@Composable
+private fun WorkStartDialog(
+    crewMembers: List<CrewMemberEntity>,
+    crew: List<EstimateCrewEntity>,
+    onDismiss: () -> Unit,
+    onStart: (String, List<Long>) -> Unit
+) {
+    var type by remember { mutableStateOf(WorkTimeType.WORK) }
+    var selectedCrew by remember(crew) {
+        mutableStateOf(crew.map { it.crewMemberId }.toSet())
+    }
+    val assignedMembers = crew.mapNotNull { assignment ->
+        crewMembers.firstOrNull { it.id == assignment.crewMemberId }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("START — szczegóły") },
+        text = {
+            Column(
+                Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SimpleDropdown(
+                    "Rodzaj czasu",
+                    type,
+                    WorkTimeType.all.map { it to WorkTimeType.label(it) }
+                ) { type = it }
+
+                Text("Kto pracuje?", fontWeight = FontWeight.SemiBold)
+                if (assignedMembers.isEmpty()) {
+                    Text("Brak przypisanej ekipy — czas zostanie zapisany jako 1 osoba.", color = BudMuted)
+                } else {
+                    assignedMembers.forEach { member ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = member.id in selectedCrew,
+                                onCheckedChange = { checked ->
+                                    selectedCrew = if (checked) selectedCrew + member.id else selectedCrew - member.id
+                                }
+                            )
+                            Text(member.name)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onStart(type, selectedCrew.toList()) }) { Text("START") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
+    )
 }
 
 @Composable

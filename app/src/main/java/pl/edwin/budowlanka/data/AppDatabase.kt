@@ -18,9 +18,10 @@ import java.util.Locale
         ClientEntity::class, SiteEntity::class, EstimateEntity::class, SpaceEntity::class,
         EstimateWorkEntity::class, CrewMemberEntity::class, EstimateCrewEntity::class,
         ExtraCostEntity::class, PhotoEntity::class, OpeningEntity::class, MaterialPriceHistoryEntity::class,
-        ShoppingItemEntity::class, ToolChecklistEntity::class, AppSettingsEntity::class
+        ShoppingItemEntity::class, ToolChecklistEntity::class, AppSettingsEntity::class,
+        WorkSessionEntity::class, WorkSessionEventEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -87,6 +88,33 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS work_sessions (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "estimateId INTEGER NOT NULL, " +
+                        "crewMemberId INTEGER, " +
+                        "type TEXT NOT NULL, " +
+                        "startAt INTEGER NOT NULL, " +
+                        "endAt INTEGER, " +
+                        "endReason TEXT NOT NULL, " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "updatedAt INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS work_session_events (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "estimateId INTEGER NOT NULL, " +
+                        "sessionId INTEGER, " +
+                        "crewMemberId INTEGER, " +
+                        "eventType TEXT NOT NULL, " +
+                        "at INTEGER NOT NULL, " +
+                        "note TEXT NOT NULL)"
+                )
+            }
+        }
+
         @Volatile private var INSTANCE: AppDatabase? = null
 
         private fun backupBeforeUpgrade(context: Context, targetVersion: Int) {
@@ -114,13 +142,13 @@ abstract class AppDatabase : RoomDatabase() {
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: run {
-                    backupBeforeUpgrade(context.applicationContext, 7)
+                    backupBeforeUpgrade(context.applicationContext, 8)
                     Room.databaseBuilder(
                         context.applicationContext,
                         AppDatabase::class.java,
                         DB_NAME
                     )
-                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                         .build()
                         .also { INSTANCE = it }
                 }

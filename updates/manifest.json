@@ -1,6 +1,6 @@
 {
-  "versionCode": 10,
-  "versionName": "0.5.5",
-  "changelog": "Przebudowany przepływ kosztorysu: Klient → Wymiary → Roboty → Plan → Wycena. Klient i pierwszy adres można dodać razem; pojedynczy adres klienta wybiera się automatycznie. Okna i drzwi dodaje się osobno z szerokością, wysokością i ilością, a ich powierzchnia jest automatycznie odejmowana od ścian. Plan pokazuje proponowany termin z możliwością dodania go jednym przyciskiem. Trasa z adresu firmy do adresu realizacji jest liczona automatycznie online z możliwością ponownego przeliczenia. Wycena, marże i rabat są dopiero na ostatnim kroku. Baza v6 z kopią przed migracją.",
+  "versionCode": 11,
+  "versionName": "0.5.6",
+  "changelog": "Rzut 2: ewidencja czasu pracy. START/STOP z długim naciśnięciem, wybór ekipy i rodzaju czasu (praca, dojazd, przerwa, zaopatrzenie), roboczogodziny per osoba, historia sesji i zdarzeń, powiadomienie Android z PAUZA/STOP oraz odtworzenie aktywnego licznika po restarcie telefonu. Dane są zapisywane pod przyszłe statystyki i synchronizację PC. Baza v8 z kopią przed migracją.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
