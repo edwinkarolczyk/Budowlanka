@@ -567,8 +567,15 @@ private fun WorksTab(
             val selected = line.id in selectedIds
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = BudPanel),
-                modifier = Modifier.fillMaxWidth()
+                colors = CardDefaults.cardColors(
+                    containerColor = if (selected) BudSelectedSoft else BudPanel
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (selected) Modifier.border(2.dp, BudOrangeStrong, RoundedCornerShape(12.dp))
+                        else Modifier
+                    )
             ) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Row(
@@ -579,14 +586,23 @@ private fun WorksTab(
                             checked = selected,
                             onCheckedChange = { checked ->
                                 selectedIds = if (checked) selectedIds + line.id else selectedIds - line.id
-                            }
+                            },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = BudOrangeStrong,
+                                checkmarkColor = Color.Black,
+                                uncheckedColor = BudMuted
+                            )
                         )
                         Column(Modifier.weight(1f)) {
                             Text(work.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             val room = spaces.firstOrNull { it.id == line.spaceId }?.name
                             if (room != null) Text(room, color = BudMuted, style = MaterialTheme.typography.labelSmall)
                         }
-                        Text(money(laborValue), color = BudOrange, fontWeight = FontWeight.Bold)
+                        Text(
+                            money(laborValue),
+                            color = if (selected) BudOrangeLight else BudOrange,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
                     Text(
