@@ -5,7 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.dp\nimport androidx.compose.ui.platform.LocalContext\nimport pl.edwin.budowlanka.util.UpdateChecker\nimport pl.edwin.budowlanka.util.UpdateInfo
 import pl.edwin.budowlanka.MainViewModel
 
 private enum class RootScreen(val label: String) {
@@ -22,13 +22,25 @@ private enum class RootScreen(val label: String) {
 fun BudowlankaRoot(vm: MainViewModel) {
     var screenName by rememberSaveable { mutableStateOf(RootScreen.DASHBOARD.name) }
     var estimateId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val context = LocalContext.current
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+    var updateDismissed by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        updateInfo = UpdateChecker.check(context)
+    }
 
     if (estimateId != null) {
-        EstimateEditor(
-            vm = vm,
-            estimateId = estimateId!!,
-            onBack = { estimateId = null }
-        )
+        Box {
+            EstimateEditor(
+                vm = vm,
+                estimateId = estimateId!!,
+                onBack = { estimateId = null }
+            )
+            if (!updateDismissed) updateInfo?.let { u ->
+                UpdateDialog(u, onDownload = { UpdateChecker.download(context, u); updateDismissed = true }, onDismiss = { updateDismissed = true })
+            }
+        }
         return
     }
 
@@ -78,4 +90,18 @@ fun BudowlankaRoot(vm: MainViewModel) {
             }
         }
     }
+    if (!updateDismissed) updateInfo?.let { u ->
+        UpdateDialog(u, onDownload = { UpdateChecker.download(context, u); updateDismissed = true }, onDismiss = { updateDismissed = true })
+    }
+}
+
+@Composable
+private fun UpdateDialog(info: UpdateInfo, onDownload: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Dostępna aktualizacja ${info.versionName}") },
+        text = { Text(info.changelog.ifBlank { "Dostępna jest nowsza wersja aplikacji." }) },
+        confirmButton = { Button(onClick = onDownload) { Text("Pobierz") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Później") } }
+    )
 }
