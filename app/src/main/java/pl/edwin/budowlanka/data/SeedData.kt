@@ -198,6 +198,44 @@ suspend fun AppDao.ensureSeedData() {
         if (existingPackageWorks.none { it.workId == id }) upsertPackageWork(PackageWorkEntity(packageId, id, index))
     }
 
+    suspend fun ensurePackageTemplate(name: String, description: String, workNames: List<String>) {
+        val packagesNow = allPackages()
+        val pid = packagesNow.firstOrNull { it.name == name }?.id
+            ?: upsertPackage(PackageEntity(name = name, description = description))
+        val currentLinks = allPackageWorks().filter { it.packageId == pid }
+        workNames.mapNotNull { existingWorks[it]?.id }.forEachIndexed { index, workId ->
+            if (currentLinks.none { it.workId == workId }) {
+                upsertPackageWork(PackageWorkEntity(pid, workId, index))
+            }
+        }
+    }
+
+    ensurePackageTemplate(
+        name = "Malowanie ścian — standard",
+        description = "Gruntowanie + dwukrotne malowanie lateksem. Ceny robocizny z katalogu Małopolskie 2026.",
+        workNames = listOf("Gruntowanie ścian", "Malowanie 2× lateks")
+    )
+    ensurePackageTemplate(
+        name = "Ściany — gładź Q3 + malowanie",
+        description = "Gładź Q3, gruntowanie i dwukrotne malowanie.",
+        workNames = listOf("Gładź Q3", "Gruntowanie ścian", "Malowanie 2× lateks")
+    )
+    ensurePackageTemplate(
+        name = "Łazienka — hydro + gres 60×60",
+        description = "Hydroizolacja podpłytkowa + gres rektyfikowany 60×60.",
+        workNames = listOf("Hydroizolacja podpłytkowa", "Flizowanie gres rektyfikowany 60×60")
+    )
+    ensurePackageTemplate(
+        name = "Dach — membrana + dachówka ceramiczna",
+        description = "Montaż membrany oraz dachówki ceramicznej.",
+        workNames = listOf("Montaż membrany dachowej", "Montaż dachówki ceramicznej")
+    )
+    ensurePackageTemplate(
+        name = "Elewacja — ocieplenie + tynk",
+        description = "Ocieplenie styropianem robocizna + wykonanie tynku elewacyjnego.",
+        workNames = listOf("Ocieplenie styropianem — robocizna", "Tynk elewacyjny")
+    )
+
     if (allCrewMembers().isEmpty()) {
         listOf("Osoba 1", "Osoba 2", "Osoba 3").forEach {
             upsertCrewMember(CrewMemberEntity(name = it))
