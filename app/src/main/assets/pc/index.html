@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BUDOWLANKA PC</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0f12;--panel:#151a1e;--panel2:#1b2024;--line:#5e676f;--text:#f4f5f6;--muted:#b8bec4;--accent:#ffb000;--green:#42c765;--red:#ff5c5c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+header{background:#090c0e;border-bottom:1px solid #282e33;padding:16px 20px}h1{margin:0;font-size:22px}
+main{max-width:1400px;margin:auto;padding:18px}.toolbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;background:var(--panel);padding:14px;border-radius:14px}
+label{font-size:12px;color:var(--muted)}input{display:block;margin-top:4px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px}
+button{border:0;border-radius:10px;padding:11px 16px;font-weight:700;background:var(--accent);color:#000;cursor:pointer}.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+#status{margin-left:auto}.ok{color:var(--green)}.bad{color:var(--red)}.muted{color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:14px 0}.card,section{background:var(--panel);border-radius:14px;padding:14px}.value{font-size:25px;font-weight:800;color:#ffc247;margin-top:6px}
+section{margin-top:14px;overflow:auto}h2{font-size:18px;margin:0 0 12px}table{width:100%;border-collapse:collapse;min-width:760px}th,td{padding:10px;border-bottom:1px solid #30373d;text-align:left}th{color:var(--muted);font-size:12px}.num{text-align:right}.badDelta{color:var(--red)}.goodDelta{color:var(--green)}
+footer{padding:18px 2px;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<header><h1>BUDOWLANKA — PC <span class="muted">tylko odczyt</span></h1></header>
+<main>
+<div class="toolbar">
+<label>Kod z telefonu<input id="code" inputmode="numeric" maxlength="6" placeholder="000000"></label>
+<button id="refresh">Pobierz dane</button>
+<button id="save" class="secondary" disabled>Zapisz JSON</button>
+<strong id="status" class="muted">Nie połączono</strong>
+</div>
+<div class="cards">
+<div class="card"><div class="muted">Klienci</div><div id="clients" class="value">—</div></div>
+<div class="card"><div class="muted">Zlecenia</div><div id="estimates" class="value">—</div></div>
+<div class="card"><div class="muted">Wartość wycen</div><div id="value" class="value">—</div></div>
+<div class="card"><div class="muted">Praca rzeczywista</div><div id="hours" class="value">—</div></div>
+<div class="card"><div class="muted">Dojazdy</div><div id="travel" class="value">—</div></div>
+<div class="card"><div class="muted">W realizacji</div><div id="active" class="value">—</div></div>
+</div>
+<section>
+<h2>Zlecenia — plan kontra wykonanie</h2>
+<table><thead><tr><th>Zlecenie</th><th>Status</th><th>Wycena</th><th>Plan r-g</th><th>Wykonanie</th><th>Różnica</th><th>Dojazd</th></tr></thead><tbody id="jobs"><tr><td colspan="7" class="muted">Pobierz dane z telefonu.</td></tr></tbody></table>
+</section>
+<section>
+<h2>Ekipa</h2>
+<table><thead><tr><th>Osoba</th><th>Praca r-g</th><th>Dojazd</th><th>Przerwy</th><th>Zaopatrzenie</th></tr></thead><tbody id="crew"><tr><td colspan="5" class="muted">Brak danych.</td></tr></tbody></table>
+</section>
+<footer id="stamp">Dane płyną wyłącznie Telefon → PC. Ten panel nie posiada operacji zapisu.</footer>
+</main>
+<script>
+const code=document.getElementById('code'),status=document.getElementById('status');
+code.value=localStorage.getItem('budowlanka_pc_code')||'';
+let snapshot=null;
+const money=v=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(Number(v||0));
+const num=v=>new Intl.NumberFormat('pl-PL',{maximumFractionDigits:1}).format(Number(v||0));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+function state(t,ok){status.textContent=t;status.className=ok?'ok':'bad'}
+async function load(){
+ const c=code.value.trim(); if(!c){state('Wpisz kod',false);return}
+ localStorage.setItem('budowlanka_pc_code',c); state('Pobieranie…',true);
+ try{
+  const r=await fetch('/snapshot?code='+encodeURIComponent(c),{cache:'no-store'});
+  if(!r.ok)throw new Error(r.status===403?'Zły kod':'Błąd HTTP '+r.status);
+  snapshot=await r.json(); render(snapshot); document.getElementById('save').disabled=false; state('Połączono • tylko odczyt',true);
+ }catch(e){state(e.message||'Błąd połączenia',false)}
+}
+function render(s){
+ const x=s.statistics||{};
+ clients.textContent=x.clientCount??0; estimates.textContent=x.estimateCount??0; value.textContent=money(x.quotedValue);
+ hours.textContent=num(x.actualWorkHours)+' r-g'; travel.textContent=num(x.travelHours)+' r-g'; active.textContent=x.inProgressEstimateCount??0;
+ const jobRows=(x.byEstimate||[]).map(j=>{
+  const d=Number(j.laborHoursDelta||0),cls=d>0.05?'badDelta':d<-0.05?'goodDelta':'';
+  return '<tr><td>'+esc(j.title)+'</td><td>'+esc(j.status)+'</td><td class="num">'+money(j.clientTotal)+'</td><td class="num">'+num(j.plannedLaborHours)+'</td><td class="num">'+num(j.actualWorkHours)+'</td><td class="num '+cls+'">'+(d>=0?'+':'')+num(d)+'</td><td class="num">'+num(j.travelHours)+'</td></tr>';
+ }).join('');
+ document.getElementById('jobs').innerHTML=jobRows||'<tr><td colspan="7" class="muted">Brak zleceń.</td></tr>';
+ const crewRows=(x.byCrew||[]).map(p=>'<tr><td>'+esc(p.name)+'</td><td class="num">'+num(p.workHours)+'</td><td class="num">'+num(p.travelHours)+'</td><td class="num">'+num(p.breakHours)+'</td><td class="num">'+num(p.supplyHours)+'</td></tr>').join('');
+ document.getElementById('crew').innerHTML=crewRows||'<tr><td colspan="5" class="muted">Brak ekipy.</td></tr>';
+ stamp.textContent='Stan z '+new Date(x.capturedAt||s.createdAt).toLocaleString('pl-PL')+' • Telefon → PC • tylko odczyt';
+}
+document.getElementById('refresh').onclick=load;
+document.getElementById('save').onclick=()=>{
+ if(!snapshot)return; const blob=new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Budowlanka_snapshot_'+Date.now()+'.json';a.click();URL.revokeObjectURL(a.href);
+};
+setInterval(()=>{if(code.value.trim())load()},30000);
+</script>
+</body>
+</html>
