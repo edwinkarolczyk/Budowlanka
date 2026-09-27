@@ -179,7 +179,240 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
 }
 
 @Composable
-private fun EstimateOverview(
+private fun ClientStep(
+    vm: MainViewModel,
+    e: EstimateEntity,
+    clients: List<ClientEntity>,
+    sites: List<SiteEntity>
+) {
+    var showQuickClient by remember { mutableStateOf(false) }
+    val client = clients.firstOrNull { it.id == e.clientId }
+    val clientSites = sites.filter { it.clientId == e.clientId }
+    val selectedSite = clientSites.firstOrNull { it.id == e.siteId }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text("1. Klient i adres", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("Najpierw wybierz klienta i miejsce realizacji. Adres jest zawsze przypisany do klienta.", color = BudMuted)
+
+        Section("Zlecenie") {
+            OutlinedTextField(
+                e.title,
+                { vm.saveEstimate(e.copy(title = it)) },
+                label = { Text("Nazwa wyceny / zlecenia") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        Section("Klient") {
+            SimpleDropdown(
+                "Klient",
+                (e.clientId ?: 0L).toString(),
+                listOf("0" to "Wybierz klienta") + clients.map { it.id.toString() to it.name }
+            ) { raw ->
+                val id = raw.toLongOrNull()?.takeIf { it != 0L }
+                val matchingSites = sites.filter { it.clientId == id }
+                val defaultSite = matchingSites.singleOrNull()?.id
+                vm.saveEstimate(e.copy(clientId = id, siteId = defaultSite))
+            }
+
+            Button(onClick = { showQuickClient = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("+ Nowy klient razem z adresem")
+            }
+
+            if (client != null) {
+                if (client.phone.isNotBlank()) Text("Telefon: ${client.phone}")
+                if (client.email.isNotBlank()) Text("E-mail: ${client.email}")
+            }
+        }
+
+        if (e.clientId != null) {
+            Section("Adres realizacji") {
+                SimpleDropdown(
+                    "Adres / inwestycja",
+                    (e.siteId ?: 0L).toString(),
+                    listOf("0" to "Wybierz adres") +
+                        clientSites.map { it.id.toString() to "${it.name.ifBlank { "Inwestycja" }} • ${it.address}" }
+                ) {
+                    vm.saveEstimate(e.copy(siteId = it.toLongOrNull()?.takeIf { id -> id != 0L }))
+                }
+
+                if (selectedSite != null) {
+                    Text(selectedSite.address, color = BudSelectedStrong, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+
+        Section("Uwagi z oględzin") {
+            OutlinedTextField(
+                e.notes,
+                { vm.saveEstimate(e.copy(notes = it)) },
+                label = { Text("Uwagi") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3
+            )
+        }
+    }
+
+    if (showQuickClient) {
+        var name by remember { mutableStateOf("") }
+        var phone by remember { mutableStateOf("") }
+        var email by remember { mutableStateOf("") }
+        var address by remember { mutableStateOf("") }
+        var siteName by remember { mutableStateOf("Adres główny") }
+        var notes by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showQuickClient = false },
+            title = { Text("Nowy klient + adres") },
+            text = {
+                Column(
+                    Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(name, { name = it }, label = { Text("Nazwa / imię") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(phone, { phone = it }, label = { Text("Telefon") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(email, { email = it }, label = { Text("E-mail") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(siteName, { siteName = it }, label = { Text("Nazwa miejsca") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(address, { address = it }, label = { Text("Pełny adres realizacji") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(notes, { notes = it }, label = { Text("Notatki") }, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    vm.addClientWithSite(
+                        ClientEntity(
+                            name = name.ifBlank { "Klient" },
+                            phone = phone,
+                            email = email,
+                            notes = notes
+                        ),
+                        siteName,
+                        address
+                    ) { clientId, siteId ->
+                        vm.saveEstimate(e.copy(clientId = clientId, siteId = siteId))
+                    }
+                    showQuickClient = false
+                }) { Text("Dodaj i wybierz") }
+            },
+            dismissButton = { TextButton(onClick = { showQuickClient = false }) { Text("Anuluj") } }
+        )
+    }
+}
+
+@Composable
+private fun PlanStep(
+    vm: MainViewModel,
+    e: EstimateEntity,
+    result: EstimateResult,
+    sites: List<SiteEntity>,
+    allEstimates: List<EstimateEntity>,
+    crewMembers: List<CrewMemberEntity>,
+    crew: List<EstimateCrewEntity>,
+    settings: AppSettingsEntity?
+) {
+    val scope = rememberCoroutineScope()
+    val selectedSite = sites.firstOrNull { it.id == e.siteId }
+    val origin = settings?.address.orEmpty()
+    val destination = selectedSite?.address.orEmpty()
+
+    var routeLoading by remember { mutableStateOf(false) }
+    var routeMessage by remember { mutableStateOf("") }
+
+    val proposed = remember(e.id, result.technicalDays, allEstimates) {
+        SchedulePlanner.propose(e.id, result.technicalDays, allEstimates)
+    }
+
+    suspend fun recalcRoute() {
+        if (origin.isBlank() || destination.isBlank()) {
+            routeMessage = if (origin.isBlank()) {
+                "Uzupełnij adres firmy w Ustawieniach."
+            } else {
+                "Wybierz adres klienta."
+            }
+            return
+        }
+        routeLoading = true
+        RouteCalculator.calculate(origin, destination)
+            .onSuccess { route ->
+                val travelDays = e.travelDays.takeIf { it > 0 }
+                    ?: ceil(result.technicalDays.coerceAtLeast(1.0)).toInt()
+                vm.saveEstimate(
+                    e.copy(
+                        oneWayKm = route.oneWayKm,
+                        travelDays = travelDays
+                    )
+                )
+                routeMessage = "Trasa: ${"%.1f".format(route.oneWayKm)} km w jedną stronę."
+            }
+            .onFailure { routeMessage = it.message ?: "Nie udało się policzyć trasy." }
+        routeLoading = false
+    }
+
+    LaunchedEffect(e.siteId, origin, destination) {
+        if (origin.isNotBlank() && destination.isNotBlank()) recalcRoute()
+    }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text("4. Plan realizacji", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+
+        Section("Proponowany termin") {
+            Text(
+                "${proposed.first} → ${proposed.second}",
+                color = BudSelectedStrong,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text("Na podstawie czasu technicznego i już zajętych terminów.", color = BudMuted)
+            Button(
+                onClick = {
+                    vm.saveEstimate(e.copy(startDate = proposed.first, endDate = proposed.second))
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Dodaj proponowany termin") }
+
+            if (e.startDate.isNotBlank()) {
+                Text("Ustalony termin: ${e.startDate} → ${e.endDate.ifBlank { e.startDate }}")
+            }
+        }
+
+        Section("Dojazd — automatycznie z adresów") {
+            Text("Start: ${origin.ifBlank { "brak adresu firmy" }}", color = BudMuted)
+            Text("Cel: ${destination.ifBlank { "brak adresu klienta" }}", color = BudMuted)
+            if (routeLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+            if (routeMessage.isNotBlank()) Text(routeMessage)
+            if (e.oneWayKm > 0.0) {
+                Text("Odległość: ${"%.1f".format(e.oneWayKm)} km w jedną stronę", color = BudSelectedStrong, fontWeight = FontWeight.Bold)
+            }
+            OutlinedButton(
+                onClick = { scope.launch { recalcRoute() } },
+                enabled = !routeLoading,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Przelicz trasę ponownie") }
+
+            IntField("Liczba dni przejazdu", e.travelDays, { vm.saveEstimate(e.copy(travelDays = it)) }, Modifier.fillMaxWidth())
+            NumberField("Stawka za km", e.kmRate, { vm.saveEstimate(e.copy(kmRate = it)) }, Modifier.fillMaxWidth())
+            NumberField("Stała kwota dojazdu", e.fixedTravelFee, { vm.saveEstimate(e.copy(fixedTravelFee = it)) }, Modifier.fillMaxWidth())
+            Text("Dojazd A↔B × dni + stała opłata = ${money(result.travelCost)}")
+        }
+
+        Section("Czas techniczny") {
+            Text("Roboczogodziny: ${"%.1f".format(result.laborHours)} h")
+            Text("Szacowany czas: ${"%.1f".format(result.technicalDays)} dni")
+        }
+
+        Text("Ekipa", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        CrewTab(vm, e, crewMembers, crew, result)
+    }
+}
+
+@Composable
+private fun ValuationStep(
     vm: MainViewModel,
     e: EstimateEntity,
     result: EstimateResult,
@@ -194,7 +427,14 @@ private fun EstimateOverview(
     workTools: List<WorkToolEntity>,
     spaces: List<SpaceEntity>,
     allCrew: List<EstimateCrewEntity>,
-    allExtras: List<ExtraCostEntity>
+    allExtras: List<ExtraCostEntity>,
+    crewMembers: List<CrewMemberEntity>,
+    crew: List<EstimateCrewEntity>,
+    extras: List<ExtraCostEntity>,
+    photos: List<PhotoEntity>,
+    shopping: List<ShoppingItemEntity>,
+    checklist: List<ToolChecklistEntity>,
+    settings: AppSettingsEntity?
 ) {
     val client = clients.firstOrNull { it.id == e.clientId }
     val completedSpend = if (client == null) 0.0 else allEstimates
@@ -212,59 +452,38 @@ private fun EstimateOverview(
         else -> 0.0
     }
     val suggestedDiscount = maxOf(client?.loyaltyDiscountPct ?: 0.0, historySuggestion)
-
     var showExtra by remember { mutableStateOf(false) }
+    var showRealization by remember { mutableStateOf(false) }
+
+    if (showRealization) {
+        Column(Modifier.fillMaxSize()) {
+            TextButton(onClick = { showRealization = false }) { Text("‹ Wróć do wyceny") }
+            RealizationTab(
+                vm, e, result, works, allLines.filter { it.estimateId == e.id }, materials, clients, sites,
+                crewMembers, crew, extras, spaces, photos, shopping, checklist, tools, settings
+            )
+        }
+        return
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Section("Klient i zlecenie") {
-            OutlinedTextField(
-                e.title,
-                { vm.saveEstimate(e.copy(title = it)) },
-                label = { Text("Nazwa wyceny") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            SimpleDropdown(
-                "Klient",
-                (e.clientId ?: 0L).toString(),
-                listOf("0" to "Bez klienta") + clients.map { it.id.toString() to it.name },
-                {
-                    val id = it.toLongOrNull()?.takeIf { v -> v != 0L }
-                    vm.saveEstimate(e.copy(clientId = id, siteId = null))
-                }
-            )
-            val clientSites = sites.filter { it.clientId == e.clientId }
-            SimpleDropdown(
-                "Adres / inwestycja",
-                (e.siteId ?: 0L).toString(),
-                listOf("0" to "Bez adresu") + clientSites.map { it.id.toString() to "${it.name} ${it.address}" },
-                { vm.saveEstimate(e.copy(siteId = it.toLongOrNull()?.takeIf { v -> v != 0L })) }
-            )
-            SimpleDropdown("Status", e.status, EstimateStatus.all.map { it to it }, { vm.saveEstimate(e.copy(status = it)) })
-            OutlinedTextField(e.startDate, { vm.saveEstimate(e.copy(startDate = it)) }, label = { Text("Start RRRR-MM-DD") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(e.endDate, { vm.saveEstimate(e.copy(endDate = it)) }, label = { Text("Koniec RRRR-MM-DD") }, modifier = Modifier.fillMaxWidth())
-            OutlinedButton(onClick = {
-                val p = SchedulePlanner.propose(e.id, result.technicalDays, allEstimates)
-                vm.saveEstimate(e.copy(startDate = p.first, endDate = p.second))
-            }, modifier = Modifier.fillMaxWidth()) {
-                Text("Zaproponuj pierwszy wolny termin")
-            }
-        }
+        Text("5. Wycena końcowa", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("Dopiero tutaj ustawiasz sposób wyceny, marże, rabat i finalną cenę dla klienta.", color = BudMuted)
 
-        Section("Materiały i marża") {
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Section("Sposób wyceny") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(e.includeMaterials, { vm.saveEstimate(e.copy(includeMaterials = it)) })
                 Text(if (e.includeMaterials) "Robocizna + materiały" else "Tylko robocizna")
             }
-            Text("Klasa materiału jest wybierana osobno przy każdej robocie.")
             NumberField("Marża robocizny %", e.marginLaborPct, { vm.saveEstimate(e.copy(marginLaborPct = it)) }, Modifier.fillMaxWidth())
             NumberField("Marża materiałów %", e.marginMaterialPct, { vm.saveEstimate(e.copy(marginMaterialPct = it)) }, Modifier.fillMaxWidth())
             NumberField("Marża całego zlecenia %", e.marginOverallPct, { vm.saveEstimate(e.copy(marginOverallPct = it)) }, Modifier.fillMaxWidth())
 
             if (client != null) {
-                Text("Historia zakończonych zleceń klienta: ${money(completedSpend)}")
+                Text("Historia klienta: ${money(completedSpend)}", color = BudMuted)
                 Text("Sugerowany rabat: $suggestedDiscount%")
                 if (suggestedDiscount > 0) {
                     OutlinedButton(onClick = { vm.saveEstimate(e.copy(discountPct = suggestedDiscount)) }) {
@@ -274,23 +493,6 @@ private fun EstimateOverview(
             }
             NumberField("Rabat własny %", e.discountPct, { vm.saveEstimate(e.copy(discountPct = it.coerceIn(0.0, 100.0))) }, Modifier.fillMaxWidth())
             Text("Wartość rabatu: ${money(result.discountValue)}")
-        }
-
-        Section("Dojazd") {
-            NumberField("Km w jedną stronę", e.oneWayKm, { vm.saveEstimate(e.copy(oneWayKm = it)) }, Modifier.fillMaxWidth())
-            IntField("Liczba dni przejazdu", e.travelDays, { vm.saveEstimate(e.copy(travelDays = it)) }, Modifier.fillMaxWidth())
-            NumberField("Stawka za km", e.kmRate, { vm.saveEstimate(e.copy(kmRate = it)) }, Modifier.fillMaxWidth())
-            NumberField("Stała kwota dojazdu", e.fixedTravelFee, { vm.saveEstimate(e.copy(fixedTravelFee = it)) }, Modifier.fillMaxWidth())
-            Text("A↔B × dni + stała opłata = ${money(result.travelCost)}")
-        }
-
-        Section("Opłacalność i termin") {
-            ResultSummary(result)
-            if (result.technicalDays > result.financialMaxDays && result.financialMaxDays > 0.0) {
-                Text("⚠ Techniczny czas przekracza termin wynikający z celu dochodowego.", color = MaterialTheme.colorScheme.error)
-            } else if (result.financialMaxDays > 0.0) {
-                Text("✓ Zlecenie mieści się w założeniu dochodowym.")
-            }
         }
 
         Section("Koszty dodatkowe") {
@@ -303,14 +505,24 @@ private fun EstimateOverview(
             Button(onClick = { showExtra = true }) { Text("+ Koszt dodatkowy") }
         }
 
-        Section("Uwagi") {
-            OutlinedTextField(
-                e.notes,
-                { vm.saveEstimate(e.copy(notes = it)) },
-                label = { Text("Uwagi do zlecenia") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
+        Section("Końcowe podsumowanie") {
+            ResultSummary(result)
+            Text("Dojazd: ${money(result.travelCost)}")
+            if (result.technicalDays > result.financialMaxDays && result.financialMaxDays > 0.0) {
+                Text("⚠ Techniczny czas przekracza termin wynikający z celu dochodowego.", color = MaterialTheme.colorScheme.error)
+            } else if (result.financialMaxDays > 0.0) {
+                Text("✓ Zlecenie mieści się w założeniu dochodowym.", color = BudGreen)
+            }
+        }
+
+        Section("Status i finalizacja") {
+            SimpleDropdown("Status", e.status, EstimateStatus.all.map { it to it }) {
+                vm.saveEstimate(e.copy(status = it))
+            }
+            if (e.startDate.isNotBlank()) Text("Termin: ${e.startDate} → ${e.endDate.ifBlank { e.startDate }}")
+            Button(onClick = { showRealization = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("PDF / akceptacja / realizacja")
+            }
         }
     }
 
@@ -323,14 +535,21 @@ private fun EstimateOverview(
             title = { Text("Koszt dodatkowy") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(category, { category = it }, label = { Text("Kategoria, np. gruz / rusztowanie") })
+                    OutlinedTextField(category, { category = it }, label = { Text("Kategoria") })
                     OutlinedTextField(desc, { desc = it }, label = { Text("Opis") })
                     NumberField("Kwota", amount, { amount = it })
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    vm.addExtra(ExtraCostEntity(estimateId = e.id, category = category, description = desc.ifBlank { category }, amount = amount))
+                    vm.addExtra(
+                        ExtraCostEntity(
+                            estimateId = e.id,
+                            category = category,
+                            description = desc.ifBlank { category },
+                            amount = amount
+                        )
+                    )
                     showExtra = false
                 }) { Text("Dodaj") }
             },
