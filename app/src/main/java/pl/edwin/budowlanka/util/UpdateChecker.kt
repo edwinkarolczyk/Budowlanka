@@ -19,14 +19,17 @@ data class UpdateInfo(
 
 object UpdateChecker {
     const val manifestUrl =
-        "https://raw.githubusercontent.com/edwinkarolczyk/Budowlanka/main/updates/manifest.json"
+        "https://raw.githubusercontent.com/edwinkarolczyk/Budowlanka/development-0.5/updates/manifest.json"
 
     suspend fun check(context: Context): UpdateInfo? = withContext(Dispatchers.IO) {
         runCatching {
-            val c = (URL(manifestUrl).openConnection() as HttpURLConnection).apply {
+            val c = (URL(manifestUrl + "?t=" + System.currentTimeMillis()).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 5000
                 readTimeout = 5000
                 requestMethod = "GET"
+                useCaches = false
+                setRequestProperty("Cache-Control", "no-cache, no-store")
+                setRequestProperty("Pragma", "no-cache")
             }
             val body = c.inputStream.bufferedReader().use { it.readText() }
             c.disconnect()
