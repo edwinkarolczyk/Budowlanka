@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import java.text.NumberFormat
 import java.util.Locale
@@ -53,6 +56,12 @@ fun SimpleDropdown(
     }
 }
 
+private fun displayNumber(value: Double): String {
+    if (value == 0.0) return ""
+    val raw = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString().trimEnd('0').trimEnd('.')
+    return raw.replace('.', ',')
+}
+
 @Composable
 fun NumberField(
     label: String,
@@ -60,17 +69,44 @@ fun NumberField(
     onValue: (Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var text by remember(value) { mutableStateOf(if (value == 0.0) "" else value.toString()) }
+    var text by remember { mutableStateOf(displayNumber(value)) }
+    var focused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(value, focused) {
+        if (!focused) text = displayNumber(value)
+    }
+
     OutlinedTextField(
         value = text,
-        onValueChange = {
-            text = it.replace(",", ".")
-            text.toDoubleOrNull()?.let(onValue)
-            if (text.isBlank()) onValue(0.0)
+        onValueChange = { entered ->
+            val filtered = buildString {
+                var separatorSeen = false
+                entered.forEach { ch ->
+                    when {
+                        ch.isDigit() -> append(ch)
+                        (ch == ',' || ch == '.') && !separatorSeen -> {
+                            append(ch)
+                            separatorSeen = true
+                        }
+                    }
+                }
+            }
+            text = filtered
+            if (filtered.isBlank()) {
+                onValue(0.0)
+            } else {
+                filtered.replace(',', '.').toDoubleOrNull()?.let(onValue)
+            }
         },
         label = { Text(label) },
         singleLine = true,
-        modifier = modifier
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = modifier.onFocusChanged { state ->
+            focused = state.isFocused
+            if (!state.isFocused) {
+                text = displayNumber(text.replace(',', '.').toDoubleOrNull() ?: value)
+            }
+        }
     )
 }
 
@@ -90,6 +126,7 @@ fun IntField(
         },
         label = { Text(label) },
         singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = modifier
     )
 }
