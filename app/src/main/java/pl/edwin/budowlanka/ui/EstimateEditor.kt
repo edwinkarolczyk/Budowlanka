@@ -362,59 +362,106 @@ private fun ResultSummary(r: EstimateResult) {
 @Composable
 private fun MeasurementsTab(vm: MainViewModel, e: EstimateEntity, spaces: List<SpaceEntity>) {
     var showAdd by remember { mutableStateOf(false) }
+    var edit by remember { mutableStateOf<SpaceEntity?>(null) }
+
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Pomieszczenia / strefy", style = MaterialTheme.typography.headlineSmall)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Pomieszczenia / strefy", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Button(onClick = { showAdd = true }) { Text("+ Pomieszczenie") }
         }
-        Text("Okna i drzwi wpisujesz jako łączną powierzchnię otworów — są odejmowane od ścian.")
+        Text("Okna i drzwi wpisujesz jako łączną powierzchnię otworów — są odejmowane od ścian.", color = BudMuted)
 
         spaces.forEach { s ->
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp)) {
-                    Text("${s.level} • ${s.name}", style = MaterialTheme.typography.titleMedium)
-                    Text("${s.length} × ${s.width} × h ${s.height} m")
+            Card(colors = CardDefaults.cardColors(containerColor = BudPanel), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("${s.level} • ${s.name}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("${s.length} × ${s.width} × h ${s.height} m", color = BudMuted)
                     Text("Podłoga/sufit: ${"%.2f".format(s.floorArea())} m²")
                     Text("Ściany po odjęciu otworów: ${"%.2f".format(s.wallArea())} m²")
-                    Text("Otwory: ${s.openingsArea} m²")
-                    TextButton(onClick = { vm.deleteSpace(s) }) { Text("Usuń") }
+                    Text("Otwory: ${s.openingsArea} m²", color = BudMuted)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedButton(onClick = { edit = s }) { Text("Edytuj") }
+                        OutlinedButton(onClick = { vm.duplicateSpace(s) }) { Text("Duplikuj") }
+                        TextButton(onClick = { vm.deleteSpace(s) }) { Text("Usuń") }
+                    }
                 }
             }
         }
     }
 
     if (showAdd) {
-        var level by remember { mutableStateOf("Parter") }
-        var name by remember { mutableStateOf("") }
-        var l by remember { mutableStateOf(0.0) }
-        var w by remember { mutableStateOf(0.0) }
-        var h by remember { mutableStateOf(2.6) }
-        var openings by remember { mutableStateOf(0.0) }
-        AlertDialog(
-            onDismissRequest = { showAdd = false },
-            title = { Text("Pomieszczenie") },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(level, { level = it }, label = { Text("Poziom / strefa") })
-                    OutlinedTextField(name, { name = it }, label = { Text("Nazwa") })
-                    NumberField("Długość [m]", l, { l = it })
-                    NumberField("Szerokość [m]", w, { w = it })
-                    NumberField("Wysokość [m]", h, { h = it })
-                    NumberField("Okna + drzwi [m²]", openings, { openings = it })
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    vm.addSpace(SpaceEntity(estimateId = e.id, level = level, name = name.ifBlank { "Pomieszczenie" }, length = l, width = w, height = h, openingsArea = openings))
-                    showAdd = false
-                }) { Text("Dodaj") }
-            },
-            dismissButton = { TextButton(onClick = { showAdd = false }) { Text("Anuluj") } }
+        SpaceDialog(
+            estimateId = e.id,
+            current = null,
+            onDismiss = { showAdd = false },
+            onSave = {
+                vm.addSpace(it)
+                showAdd = false
+            }
         )
     }
+
+    edit?.let { current ->
+        SpaceDialog(
+            estimateId = e.id,
+            current = current,
+            onDismiss = { edit = null },
+            onSave = {
+                vm.addSpace(it)
+                edit = null
+            }
+        )
+    }
+}
+
+@Composable
+private fun SpaceDialog(
+    estimateId: Long,
+    current: SpaceEntity?,
+    onDismiss: () -> Unit,
+    onSave: (SpaceEntity) -> Unit
+) {
+    var level by remember(current) { mutableStateOf(current?.level ?: "Parter") }
+    var name by remember(current) { mutableStateOf(current?.name ?: "") }
+    var l by remember(current) { mutableStateOf(current?.length ?: 0.0) }
+    var w by remember(current) { mutableStateOf(current?.width ?: 0.0) }
+    var h by remember(current) { mutableStateOf(current?.height ?: 2.6) }
+    var openings by remember(current) { mutableStateOf(current?.openingsArea ?: 0.0) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (current == null) "Nowe pomieszczenie" else "Edytuj pomieszczenie") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedTextField(level, { level = it }, label = { Text("Poziom / strefa") })
+                OutlinedTextField(name, { name = it }, label = { Text("Nazwa") })
+                NumberField("Długość [m]", l, { l = it })
+                NumberField("Szerokość [m]", w, { w = it })
+                NumberField("Wysokość [m]", h, { h = it })
+                NumberField("Okna + drzwi [m²]", openings, { openings = it })
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                onSave(
+                    SpaceEntity(
+                        id = current?.id ?: 0L,
+                        estimateId = estimateId,
+                        level = level,
+                        name = name.ifBlank { "Pomieszczenie" },
+                        length = l,
+                        width = w,
+                        height = h,
+                        openingsArea = openings
+                    )
+                )
+            }) { Text("Zapisz") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
+    )
 }
 
 @Composable
