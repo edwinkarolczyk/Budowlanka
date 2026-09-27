@@ -1,5 +1,6 @@
 package pl.edwin.budowlanka.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,8 +48,9 @@ fun SimpleDropdown(
             OutlinedButton(
                 onClick = { expanded = true },
                 modifier = Modifier.fillMaxWidth(),
-                border = ButtonDefaults.outlinedButtonBorder.copy(
-                    width = if (expanded) 2.dp else 1.dp
+                border = BorderStroke(
+                    if (expanded) 2.dp else 1.dp,
+                    if (expanded) BudSelectedStrong else BudLine
                 ),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = if (expanded) BudOrangeLight else BudText,
