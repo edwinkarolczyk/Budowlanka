@@ -28,6 +28,14 @@ object MaterialTier {
     val all = listOf(BUDGET, STANDARD, PREMIUM)
 }
 
+object LaborPriceMode {
+    const val CATALOG = "KATALOG"
+    const val MIN = "MIN"
+    const val MAX = "MAX"
+    const val CUSTOM = "WLASNA"
+    val all = listOf(CATALOG, MIN, MAX, CUSTOM)
+}
+
 object PayMode {
     const val PROFIT_PERCENT = "PROCENT_ZYSKU"
     const val HOURLY = "GODZINOWO"
@@ -184,7 +192,8 @@ data class EstimateWorkEntity(
     val quantitySource: String = QuantitySource.MANUAL,
     val materialTier: String = MaterialTier.STANDARD,
     val wastePctOverride: Double? = null,
-    val laborRateOverride: Double? = null
+    val laborRateOverride: Double? = null,
+    val laborPriceMode: String = LaborPriceMode.CATALOG
 )
 
 @Entity(tableName = "crew_members")
