@@ -1,6 +1,6 @@
 {
-  "versionCode": 8,
-  "versionName": "0.5.3",
-  "changelog": "Stabilizacja i ergonomia kosztorysu: własna stawka dla konkretnej pozycji, wyszukiwanie robót przy dodawaniu, duplikowanie pozycji/pomieszczeń/całych kosztorysów, zaznaczanie wielu pozycji i usuwanie zbiorcze, edycja pomieszczeń oraz automatyczna kopia bazy przed migracją.",
+  "versionCode": 9,
+  "versionName": "0.5.4",
+  "changelog": "Czytelniejsze zaznaczenia w całej aplikacji: jaśniejszy bursztynowy akcent, mocniejsze aktywne pola, dropdowny, checkboxy, kroki kosztorysu, filtry i dolna nawigacja. Katalog Małopolskie 2025/2026 uporządkowany kategoriami; działają Ulubione i Moje, dodano gwiazdki oraz skrócono formularz roboty przez sekcję zaawansowaną. Migracja bazy do v5 z kopią przed aktualizacją.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
