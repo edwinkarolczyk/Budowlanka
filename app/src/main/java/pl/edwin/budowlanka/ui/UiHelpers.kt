@@ -51,7 +51,7 @@ fun SimpleDropdown(
                     width = if (expanded) 2.dp else 1.dp
                 ),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = if (expanded) BudSelectedStrong else BudText,
+                    contentColor = if (expanded) BudOrangeLight else BudText,
                     containerColor = if (expanded) BudSelectedSoft else Color.Transparent
                 ),
                 shape = RoundedCornerShape(10.dp)
@@ -77,7 +77,7 @@ fun SimpleDropdown(
                         } else null,
                         colors = MenuDefaults.itemColors(),
                         modifier = Modifier.background(
-                            if (selected) BudSelectedStrong else Color.Transparent
+                            if (selected) BudOrangeStrong else Color.Transparent
                         ),
                         onClick = {
                             expanded = false
@@ -134,9 +134,9 @@ fun NumberField(
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = BudSelectedStrong,
-            focusedLabelColor = BudSelectedStrong,
-            cursorColor = BudSelectedStrong,
+            focusedBorderColor = BudOrangeStrong,
+            focusedLabelColor = BudOrangeLight,
+            cursorColor = BudOrangeStrong,
             focusedContainerColor = BudSelectedSoft,
             unfocusedBorderColor = BudLine
         ),
@@ -167,9 +167,9 @@ fun IntField(
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = BudSelectedStrong,
-            focusedLabelColor = BudSelectedStrong,
-            cursorColor = BudSelectedStrong,
+            focusedBorderColor = BudOrangeStrong,
+            focusedLabelColor = BudOrangeLight,
+            cursorColor = BudOrangeStrong,
             focusedContainerColor = BudSelectedSoft,
             unfocusedBorderColor = BudLine
         ),
