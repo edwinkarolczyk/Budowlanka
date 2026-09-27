@@ -32,8 +32,11 @@ object BackupManager {
         }
         root.put("works", arr(dao.allWorks().map { w -> obj(
             "id" to w.id, "name" to w.name, "category" to w.category, "unit" to w.unit,
-            "laborRate" to w.laborRate, "laborHoursPerUnit" to w.laborHoursPerUnit,
-            "defaultWastePct" to w.defaultWastePct, "active" to w.active
+            "laborRate" to w.laborRate, "laborRateLow" to w.laborRateLow,
+            "laborRateHigh" to w.laborRateHigh, "laborHoursPerUnit" to w.laborHoursPerUnit,
+            "defaultWastePct" to w.defaultWastePct, "priceRegion" to w.priceRegion,
+            "priceYear" to w.priceYear, "priceSource" to w.priceSource,
+            "includesMaterial" to w.includesMaterial, "active" to w.active
         ) }))
         root.put("materials", arr(dao.allMaterials().map { m -> obj(
             "id" to m.id, "name" to m.name, "unit" to m.unit, "manufacturer" to m.manufacturer,
