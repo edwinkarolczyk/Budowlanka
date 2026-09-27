@@ -20,7 +20,7 @@ import java.util.Locale
         ExtraCostEntity::class, PhotoEntity::class, MaterialPriceHistoryEntity::class,
         ShoppingItemEntity::class, ToolChecklistEntity::class, AppSettingsEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -43,6 +43,12 @@ abstract class AppDatabase : RoomDatabase() {
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE estimate_works ADD COLUMN laborRateOverride REAL")
+            }
+        }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE estimate_works ADD COLUMN laborPriceMode TEXT NOT NULL DEFAULT 'KATALOG'")
             }
         }
 
@@ -73,13 +79,13 @@ abstract class AppDatabase : RoomDatabase() {
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: run {
-                    backupBeforeUpgrade(context.applicationContext, 3)
+                    backupBeforeUpgrade(context.applicationContext, 4)
                     Room.databaseBuilder(
                         context.applicationContext,
                         AppDatabase::class.java,
                         DB_NAME
                     )
-                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                         .build()
                         .also { INSTANCE = it }
                 }
