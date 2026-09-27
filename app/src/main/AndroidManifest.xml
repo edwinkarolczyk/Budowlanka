@@ -7,8 +7,8 @@
 
     <application
         android:name=".BudowlankaApp"
-        android:icon="@drawable/ic_budowlanka"
-        android:roundIcon="@drawable/ic_budowlanka"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="true"
         android:label="BUDOWLANKA"
         android:theme="@style/Theme.Budowlanka">
