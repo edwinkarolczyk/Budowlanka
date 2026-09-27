@@ -1,6 +1,6 @@
 {
-  "versionCode": 9,
-  "versionName": "0.5.4",
-  "changelog": "Czytelniejsze zaznaczenia w całej aplikacji: jaśniejszy bursztynowy akcent, mocniejsze aktywne pola, dropdowny, checkboxy, kroki kosztorysu, filtry i dolna nawigacja. Katalog Małopolskie 2025/2026 uporządkowany kategoriami; działają Ulubione i Moje, dodano gwiazdki oraz skrócono formularz roboty przez sekcję zaawansowaną. Migracja bazy do v5 z kopią przed aktualizacją.",
+  "versionCode": 10,
+  "versionName": "0.5.5",
+  "changelog": "Przebudowany przepływ kosztorysu: Klient → Wymiary → Roboty → Plan → Wycena. Klient i pierwszy adres można dodać razem; pojedynczy adres klienta wybiera się automatycznie. Okna i drzwi dodaje się osobno z szerokością, wysokością i ilością, a ich powierzchnia jest automatycznie odejmowana od ścian. Plan pokazuje proponowany termin z możliwością dodania go jednym przyciskiem. Trasa z adresu firmy do adresu realizacji jest liczona automatycznie online z możliwością ponownego przeliczenia. Wycena, marże i rabat są dopiero na ostatnim kroku. Baza v6 z kopią przed migracją.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
