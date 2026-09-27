@@ -1,6 +1,6 @@
 {
-  "versionCode": 11,
-  "versionName": "0.5.6",
-  "changelog": "Rzut 2: ewidencja czasu pracy. START/STOP z długim naciśnięciem, wybór ekipy i rodzaju czasu (praca, dojazd, przerwa, zaopatrzenie), roboczogodziny per osoba, historia sesji i zdarzeń, powiadomienie Android z PAUZA/STOP oraz odtworzenie aktywnego licznika po restarcie telefonu. Dane są zapisywane pod przyszłe statystyki i synchronizację PC. Baza v8 z kopią przed migracją.",
+  "versionCode": 12,
+  "versionName": "0.5.7",
+  "changelog": "Rzut 3: jednokierunkowa synchronizacja Telefon → PC przez lokalne Wi‑Fi. W Ustawieniach uruchamiasz panel PC, dostajesz adres i kod dostępu. PC działa tylko do odczytu, pobiera pełny snapshot danych oraz statystyki: zlecenia, klienci, wartość wycen, planowane i rzeczywiste roboczogodziny, dojazdy, przerwy, zaopatrzenie i rozbicie na ekipę. Panel odświeża się co 30 s i pozwala zapisać JSON.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
