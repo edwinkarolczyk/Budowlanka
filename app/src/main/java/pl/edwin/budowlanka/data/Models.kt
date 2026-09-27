@@ -213,6 +213,7 @@ data class PhotoEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val estimateId: Long,
     val spaceId: Long? = null,
+    val estimateWorkId: Long? = null,
     val uri: String,
     val caption: String = ""
 )
