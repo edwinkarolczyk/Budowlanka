@@ -76,7 +76,12 @@ object EstimateCalculator {
         estimateWorks.filter { it.estimateId == estimate.id }.forEach { line ->
             val work = works.firstOrNull { it.id == line.workId } ?: return@forEach
             val qty = resolveQuantity(line, spaces.filter { it.estimateId == estimate.id })
-            val laborRate = line.laborRateOverride ?: work.laborRate
+            val laborRate = when (line.laborPriceMode) {
+                LaborPriceMode.MIN -> work.laborRateLow.takeIf { it > 0.0 } ?: work.laborRate
+                LaborPriceMode.MAX -> work.laborRateHigh.takeIf { it > 0.0 } ?: work.laborRate
+                LaborPriceMode.CUSTOM -> line.laborRateOverride ?: work.laborRate
+                else -> work.laborRate
+            }
             laborBase += qty * laborRate
             laborHours += qty * work.laborHoursPerUnit
 
