@@ -21,9 +21,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pl.edwin.budowlanka.MainViewModel
 import pl.edwin.budowlanka.data.*
 import pl.edwin.budowlanka.domain.EstimateCalculator
-import pl.edwin.budowlanka.domain.EstimateResult\nimport pl.edwin.budowlanka.domain.SchedulePlanner
+import pl.edwin.budowlanka.domain.EstimateResult
+import pl.edwin.budowlanka.domain.SchedulePlanner
 import pl.edwin.budowlanka.util.PdfExporter
-import pl.edwin.budowlanka.util.PdfPayload\nimport kotlinx.coroutines.launch
+import pl.edwin.budowlanka.util.PdfPayload
+import kotlinx.coroutines.launch
 
 @Composable
 fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
