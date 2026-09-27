@@ -29,6 +29,8 @@ interface AppDao {
     fun observeSpaces(): Flow<List<SpaceEntity>>
     @Query("SELECT * FROM estimate_works")
     fun observeEstimateWorks(): Flow<List<EstimateWorkEntity>>
+    @Query("SELECT * FROM openings")
+    fun observeOpenings(): Flow<List<OpeningEntity>>
     @Query("SELECT * FROM crew_members ORDER BY name")
     fun observeCrewMembers(): Flow<List<CrewMemberEntity>>
     @Query("SELECT * FROM estimate_crew")
@@ -61,6 +63,7 @@ interface AppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertEstimate(v: EstimateEntity): Long
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertSpace(v: SpaceEntity): Long
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertEstimateWork(v: EstimateWorkEntity): Long
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertOpening(v: OpeningEntity): Long
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertCrewMember(v: CrewMemberEntity): Long
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertEstimateCrew(v: EstimateCrewEntity)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertExtraCost(v: ExtraCostEntity): Long
@@ -78,6 +81,7 @@ interface AppDao {
     @Delete suspend fun deleteEstimate(v: EstimateEntity)
     @Delete suspend fun deleteSpace(v: SpaceEntity)
     @Delete suspend fun deleteEstimateWork(v: EstimateWorkEntity)
+    @Delete suspend fun deleteOpening(v: OpeningEntity)
     @Delete suspend fun deleteCrewMember(v: CrewMemberEntity)
     @Delete suspend fun deleteExtraCost(v: ExtraCostEntity)
     @Delete suspend fun deletePhoto(v: PhotoEntity)
@@ -93,6 +97,8 @@ interface AppDao {
     suspend fun getEstimate(id: Long): EstimateEntity?
     @Query("SELECT * FROM app_settings WHERE id=1 LIMIT 1")
     suspend fun getSettings(): AppSettingsEntity?
+    @Query("SELECT * FROM spaces WHERE id=:id LIMIT 1")
+    suspend fun getSpace(id: Long): SpaceEntity?
     @Query("SELECT * FROM clients WHERE id=:id LIMIT 1")
     suspend fun getClient(id: Long): ClientEntity?
     @Query("SELECT * FROM sites WHERE id=:id LIMIT 1")
@@ -110,6 +116,7 @@ interface AppDao {
     @Query("SELECT * FROM estimates") suspend fun allEstimates(): List<EstimateEntity>
     @Query("SELECT * FROM spaces") suspend fun allSpaces(): List<SpaceEntity>
     @Query("SELECT * FROM estimate_works") suspend fun allEstimateWorks(): List<EstimateWorkEntity>
+    @Query("SELECT * FROM openings") suspend fun allOpenings(): List<OpeningEntity>
     @Query("SELECT * FROM crew_members") suspend fun allCrewMembers(): List<CrewMemberEntity>
     @Query("SELECT * FROM estimate_crew") suspend fun allEstimateCrew(): List<EstimateCrewEntity>
     @Query("SELECT * FROM extra_costs") suspend fun allExtraCosts(): List<ExtraCostEntity>
