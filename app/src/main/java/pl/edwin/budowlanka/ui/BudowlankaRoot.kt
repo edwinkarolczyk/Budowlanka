@@ -5,7 +5,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp\nimport androidx.compose.ui.platform.LocalContext\nimport pl.edwin.budowlanka.util.UpdateChecker\nimport pl.edwin.budowlanka.util.UpdateInfo
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import pl.edwin.budowlanka.util.UpdateChecker
+import pl.edwin.budowlanka.util.UpdateInfo
 import pl.edwin.budowlanka.MainViewModel
 
 private enum class RootScreen(val label: String) {
