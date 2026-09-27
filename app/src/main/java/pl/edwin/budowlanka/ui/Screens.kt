@@ -218,6 +218,18 @@ fun CatalogScreen(vm: MainViewModel) {
     var linkWorkId by remember { mutableStateOf<Long?>(null) }
     var packageId by remember { mutableStateOf<Long?>(null) }
 
+    val catalogWorks = works.filter { work ->
+        val matchesQuery = query.isBlank() ||
+            work.name.contains(query, true) ||
+            work.category.contains(query, true)
+        val matchesFilter = when (filter) {
+            "Ulubione" -> work.isFavorite
+            "Moje" -> work.isUserDefined
+            else -> true
+        }
+        matchesQuery && matchesFilter
+    }
+
     val categoryIcons: Map<String, ImageVector> = mapOf(
         "Roboty ziemne" to Icons.Rounded.Agriculture,
         "Fundamenty" to Icons.Rounded.Foundation,
@@ -260,7 +272,7 @@ fun CatalogScreen(vm: MainViewModel) {
             listOf("Wszystkie", "Ulubione", "Moje").forEach { item ->
                 val active = filter == item
                 Surface(
-                    color = if (active) BudOrange else BudPanel2,
+                    color = if (active) BudSelectedStrong else BudPanel2,
                     shape = RoundedCornerShape(9.dp),
                     modifier = Modifier.weight(1f).clickable { filter = item }
                 ) {
@@ -286,7 +298,11 @@ fun CatalogScreen(vm: MainViewModel) {
 
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("Roboty", "Materiały", "Pakiety").forEach {
-                if (mode == it) Button(onClick = { mode = it }, shape = RoundedCornerShape(9.dp)) { Text(it) }
+                if (mode == it) Button(
+                    onClick = { mode = it },
+                    shape = RoundedCornerShape(9.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BudSelectedStrong, contentColor = Color.Black)
+                ) { Text(it) }
                 else OutlinedButton(onClick = { mode = it }, shape = RoundedCornerShape(9.dp)) { Text(it) }
             }
         }
@@ -294,8 +310,7 @@ fun CatalogScreen(vm: MainViewModel) {
         when (mode) {
             "Roboty" -> {
                 if (selectedCategory == null) {
-                    val categories = works
-                        .filter { query.isBlank() || it.name.contains(query, true) || it.category.contains(query, true) }
+                    val categories = catalogWorks
                         .groupBy { it.category }
                         .toSortedMap()
                     categories.forEach { (cat, list) ->
@@ -320,41 +335,53 @@ fun CatalogScreen(vm: MainViewModel) {
                     }
                     Button(onClick = { addWork = true }, modifier = Modifier.fillMaxWidth()) { Text("+ Dodaj własną robotę") }
                 } else {
-                    val list = works.filter {
-                        it.category == selectedCategory &&
-                            (query.isBlank() || it.name.contains(query, true)) &&
-                            filter != "Ulubione"
+                    val list = catalogWorks.filter { it.category == selectedCategory }
+                    if (list.isEmpty()) {
+                        Text("Brak pozycji dla wybranego filtra.", color = BudMuted)
                     }
-                    if (filter == "Ulubione") {
-                        Text("Ulubione dodamy w kolejnym kroku. Ten filtr jest już przygotowany w wyglądzie.", color = BudMuted)
-                    } else {
-                        list.forEach { w ->
-                            Card(colors = CardDefaults.cardColors(containerColor = BudPanel), modifier = Modifier.fillMaxWidth()) {
-                                Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Text(w.name, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                                        Text(money(w.laborRate), color = BudOrange, fontWeight = FontWeight.Bold)
+                    list.forEach { w ->
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (w.isFavorite) BudSelectedSoft else BudPanel
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(onClick = { vm.toggleWorkFavorite(w) }) {
+                                        Icon(
+                                            if (w.isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                            if (w.isFavorite) "Usuń z ulubionych" else "Dodaj do ulubionych",
+                                            tint = if (w.isFavorite) BudSelectedStrong else BudMuted
+                                        )
                                     }
-                                    val range = if (w.laborRateLow > 0 && w.laborRateHigh > w.laborRateLow)
-                                        "Widełki: ${money(w.laborRateLow)}–${money(w.laborRateHigh)}/${w.unit}"
-                                    else "Stawka: ${money(w.laborRate)}/${w.unit}"
-                                    Text(range, color = BudMuted, style = MaterialTheme.typography.bodySmall)
-                                    if (w.priceYear > 0) {
-                                        Text("${w.priceRegion} • ${w.priceYear}${if (w.includesMaterial) " • z materiałem" else ""}", color = BudMuted, style = MaterialTheme.typography.labelSmall)
-                                    }
-                                    if (w.priceSource.isNotBlank()) Text(w.priceSource, color = BudMuted, style = MaterialTheme.typography.labelSmall)
-                                    val links = workMaterials.filter { it.workId == w.id }
-                                    if (links.isNotEmpty()) {
-                                        Text("Materiały: " + links.joinToString { l ->
-                                            val m = materials.firstOrNull { it.id == l.materialId }
-                                            if (m != null) "${m.name} ${l.qtyPerWorkUnit} ${m.unit}/${w.unit}" else ""
-                                        }, color = BudMuted, style = MaterialTheme.typography.labelSmall)
-                                    }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        OutlinedButton(onClick = { editWork = w }) { Text("Edytuj") }
-                                        OutlinedButton(onClick = { linkWorkId = w.id }) { Text("+ materiał") }
-                                        TextButton(onClick = { vm.deleteWork(w) }) { Text("Usuń") }
-                                    }
+                                    Text(w.name, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                    Text(money(w.laborRate), color = BudSelectedStrong, fontWeight = FontWeight.Bold)
+                                }
+                                val range = if (w.laborRateLow > 0 && w.laborRateHigh > w.laborRateLow)
+                                    "Widełki: ${money(w.laborRateLow)}–${money(w.laborRateHigh)}/${w.unit}"
+                                else "Stawka: ${money(w.laborRate)}/${w.unit}"
+                                Text(range, color = BudMuted, style = MaterialTheme.typography.bodySmall)
+                                if (w.priceYear > 0) {
+                                    Text("${w.priceRegion} • ${w.priceYear}${if (w.includesMaterial) " • z materiałem" else ""}", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                                } else if (w.isUserDefined) {
+                                    Text("Własna pozycja", color = BudSelectedStrong, style = MaterialTheme.typography.labelSmall)
+                                }
+                                if (w.priceSource.isNotBlank()) Text(w.priceSource, color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                                val links = workMaterials.filter { it.workId == w.id }
+                                if (links.isNotEmpty()) {
+                                    Text("Materiały: " + links.joinToString { l ->
+                                        val m = materials.firstOrNull { it.id == l.materialId }
+                                        if (m != null) "${m.name} ${l.qtyPerWorkUnit} ${m.unit}/${w.unit}" else ""
+                                    }, color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    OutlinedButton(onClick = { editWork = w }) { Text("Edytuj") }
+                                    OutlinedButton(onClick = { linkWorkId = w.id }) { Text("+ materiał") }
+                                    TextButton(onClick = { vm.deleteWork(w) }) { Text("Usuń") }
                                 }
                             }
                         }
@@ -529,6 +556,8 @@ private fun WorkDialog(current: WorkEntity? = null, onDismiss: () -> Unit, onSav
                         priceYear = year,
                         priceSource = source,
                         includesMaterial = includesMaterial,
+                        isFavorite = current?.isFavorite ?: false,
+                        isUserDefined = current?.isUserDefined ?: true,
                         active = current?.active ?: true
                     )
                 )
@@ -837,7 +866,7 @@ fun SettingsScreen(vm: MainViewModel) {
         }
 
         Section("Aktualizacje — jeden kanał") {
-            Text("Wersja: 0.5.3")
+            Text("Wersja: 0.5.4")
             Button(onClick = {
                 scope.launch {
                     update = UpdateChecker.check(context)
