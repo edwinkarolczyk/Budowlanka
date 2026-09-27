@@ -518,25 +518,63 @@ private fun WorkDialog(current: WorkEntity? = null, onDismiss: () -> Unit, onSav
     var year by remember(current) { mutableStateOf(current?.priceYear ?: 0) }
     var source by remember(current) { mutableStateOf(current?.priceSource ?: "") }
     var includesMaterial by remember(current) { mutableStateOf(current?.includesMaterial ?: false) }
+    var advanced by remember(current) { mutableStateOf(current != null) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nowa robota") },
+        title = { Text(if (current == null) "Nowa robota" else "Edytuj robotę") },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("Nazwa") })
-                OutlinedTextField(category, { category = it }, label = { Text("Kategoria") })
-                OutlinedTextField(unit, { unit = it }, label = { Text("Jednostka") })
-                NumberField("Stawka domyślna", rate, { rate = it })
-                NumberField("Widełki od", low, { low = it })
-                NumberField("Widełki do", high, { high = it })
-                NumberField("Roboczogodziny / jednostkę", hours, { hours = it })
-                NumberField("Domyślny zapas %", waste, { waste = it })
-                OutlinedTextField(region, { region = it }, label = { Text("Region cennika") })
-                IntField("Rok cennika", year, { year = it })
-                OutlinedTextField(source, { source = it }, label = { Text("Źródło / uwagi") })
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(includesMaterial, { includesMaterial = it })
-                    Text("Cena obejmuje materiał")
+            Column(
+                Modifier
+                    .heightIn(max = 560.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(name, { name = it }, label = { Text("Nazwa") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(category, { category = it }, label = { Text("Kategoria") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(unit, { unit = it }, label = { Text("Jednostka") }, modifier = Modifier.fillMaxWidth())
+
+                NumberField("Stawka domyślna", rate, { rate = it }, Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NumberField("Widełki od", low, { low = it }, Modifier.weight(1f))
+                    NumberField("Widełki do", high, { high = it }, Modifier.weight(1f))
+                }
+
+                Surface(
+                    color = if (advanced) BudSelectedSoft else BudPanel2,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { advanced = !advanced }
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            if (advanced) "Mniej ustawień" else "Więcej ustawień",
+                            color = if (advanced) BudSelectedStrong else BudText,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Icon(
+                            if (advanced) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                            null,
+                            tint = if (advanced) BudSelectedStrong else BudMuted
+                        )
+                    }
+                }
+
+                if (advanced) {
+                    NumberField("Roboczogodziny / jednostkę", hours, { hours = it }, Modifier.fillMaxWidth())
+                    NumberField("Domyślny zapas %", waste, { waste = it }, Modifier.fillMaxWidth())
+                    OutlinedTextField(region, { region = it }, label = { Text("Region cennika") }, modifier = Modifier.fillMaxWidth())
+                    IntField("Rok cennika", year, { year = it }, Modifier.fillMaxWidth())
+                    OutlinedTextField(source, { source = it }, label = { Text("Źródło / uwagi") }, modifier = Modifier.fillMaxWidth())
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(includesMaterial, { includesMaterial = it })
+                        Text("Cena obejmuje materiał")
+                    }
                 }
             }
         },
