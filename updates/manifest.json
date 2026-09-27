@@ -1,6 +1,6 @@
 {
   "versionCode": 9,
   "versionName": "0.5.4",
-  "changelog": "Mocniejsze i jednoznaczne zaznaczenia w całej aplikacji: aktywna dolna nawigacja, kroki kosztorysu, filtry, listy rozwijane, pola i zaznaczone pozycje. Katalog dostał filtry Wszystkie / Małopolskie 2026 / Moje, wybór ceny MIN / KATALOG / MAX / WŁASNA oraz nowe pakiety robót. Migracja bazy 3→4 zachowuje dane i wykonuje kopię przed aktualizacją.",
+  "changelog": "Czytelniejsze zaznaczenia w całej aplikacji: jaśniejszy bursztynowy akcent, mocniejsze aktywne pola, dropdowny, checkboxy, kroki kosztorysu, filtry i dolna nawigacja. Katalog Małopolskie 2025/2026 uporządkowany kategoriami; działają Ulubione i Moje, dodano gwiazdki oraz skrócono formularz roboty przez sekcję zaawansowaną. Migracja bazy do v5 z kopią przed aktualizacją.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
