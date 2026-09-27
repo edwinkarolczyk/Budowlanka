@@ -34,7 +34,9 @@ import pl.edwin.budowlanka.domain.EstimateResult
 import pl.edwin.budowlanka.domain.SchedulePlanner
 import pl.edwin.budowlanka.util.PdfExporter
 import pl.edwin.budowlanka.util.PdfPayload
+import pl.edwin.budowlanka.util.RouteCalculator
 import kotlinx.coroutines.launch
+import kotlin.math.ceil
 
 @Composable
 fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
@@ -49,6 +51,7 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
     val clients by vm.clients.collectAsStateWithLifecycle()
     val sites by vm.sites.collectAsStateWithLifecycle()
     val allSpaces by vm.spaces.collectAsStateWithLifecycle()
+    val allOpenings by vm.openings.collectAsStateWithLifecycle()
     val allLines by vm.estimateWorks.collectAsStateWithLifecycle()
     val crewMembers by vm.crewMembers.collectAsStateWithLifecycle()
     val allCrew by vm.estimateCrew.collectAsStateWithLifecycle()
@@ -83,9 +86,8 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
         )
     }
 
-    var tab by rememberSaveableCompat { mutableStateOf("Dane") }
-    var summaryMode by remember { mutableStateOf("Ekipa") }
-    val steps = listOf("Dane", "Pomieszczenia", "Roboty", "Podsumowanie")
+    var tab by rememberSaveableCompat { mutableStateOf("Klient") }
+    val steps = listOf("Klient", "Wymiary", "Roboty", "Plan", "Wycena")
 
     Column(Modifier.fillMaxSize().background(BudBg)) {
         Surface(color = Color(0xFF090C0E), shadowElevation = 8.dp) {
@@ -153,52 +155,24 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
 
         Box(Modifier.fillMaxSize()) {
             when (tab) {
-                "Dane" -> EstimateOverview(vm, estimate, result, clients, sites, estimates, works, allLines, materials, workMaterials, tools, workTools, allSpaces, allCrew, allExtras)
-                "Pomieszczenia" -> MeasurementsTab(vm, estimate, spaces)
+                "Klient" -> ClientStep(vm, estimate, clients, sites)
+                "Wymiary" -> MeasurementsTab(
+                    vm,
+                    estimate,
+                    spaces,
+                    allOpenings.filter { opening -> spaces.any { it.id == opening.spaceId } }
+                )
                 "Roboty" -> WorksTab(vm, estimate, works, materials, packages, packageWorks, spaces, lines, result)
-                else -> Column(Modifier.fillMaxSize().background(BudBg)) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf("Ekipa", "Realizacja").forEach { item ->
-                            val selected = summaryMode == item
-                            Surface(
-                                color = if (selected) BudOrangeStrong else BudPanel2,
-                                shape = RoundedCornerShape(9.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .then(
-                                        if (selected) Modifier.border(2.dp, BudOrangeLight, RoundedCornerShape(9.dp))
-                                        else Modifier
-                                    )
-                                    .clickable { summaryMode = item }
-                            ) {
-                                Text(
-                                    item,
-                                    color = if (selected) Color.Black else BudText,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(vertical = 10.dp),
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                )
-                            }
-                        }
-                    }
-                    Box(Modifier.weight(1f)) {
-                        if (summaryMode == "Ekipa") {
-                            CrewTab(vm, estimate, crewMembers, crew, result)
-                        } else {
-                            RealizationTab(
-                                vm, estimate, result, works, lines, materials, clients, sites,
-                                crewMembers, crew, extras, spaces,
-                                photos.filter { it.estimateId == estimateId },
-                                shopping.filter { it.estimateId == estimateId },
-                                toolChecklist.filter { it.estimateId == estimateId },
-                                tools, settings
-                            )
-                        }
-                    }
-                }
+                "Plan" -> PlanStep(vm, estimate, result, sites, estimates, crewMembers, crew, settings)
+                else -> ValuationStep(
+                    vm, estimate, result, clients, sites, estimates, works, allLines,
+                    materials, workMaterials, tools, workTools, allSpaces, allCrew, allExtras,
+                    crewMembers, crew, extras,
+                    photos.filter { it.estimateId == estimateId },
+                    shopping.filter { it.estimateId == estimateId },
+                    toolChecklist.filter { it.estimateId == estimateId },
+                    settings
+                )
             }
         }
     }
