@@ -3,13 +3,16 @@ package pl.edwin.budowlanka
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import pl.edwin.budowlanka.data.*
 import pl.edwin.budowlanka.domain.EstimateCalculator
+import pl.edwin.budowlanka.util.PcSyncServer
 import pl.edwin.budowlanka.util.WorkTimerNotifications
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -40,6 +43,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val settings = dao.observeSettings().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val workTimerMutex = Mutex()
+    private val _pcSyncStatus = MutableStateFlow(PcSyncServer.currentStatus())
+    val pcSyncStatus = _pcSyncStatus.asStateFlow()
 
     init {
         viewModelScope.launch { dao.ensureSeedData() }
@@ -254,6 +259,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun deletePhoto(v: PhotoEntity) = viewModelScope.launch { dao.deletePhoto(v) }
 
     fun saveSettings(v: AppSettingsEntity) = viewModelScope.launch { dao.upsertSettings(v) }
+
+    fun startPcSync() {
+        _pcSyncStatus.value = PcSyncServer.start(getApplication(), dao)
+    }
+
+    fun stopPcSync() {
+        PcSyncServer.stop(getApplication())
+        _pcSyncStatus.value = PcSyncServer.currentStatus()
+    }
 
     fun setShoppingStatus(item: ShoppingItemEntity, status: String) = viewModelScope.launch {
         dao.upsertShopping(item.copy(status = status))
