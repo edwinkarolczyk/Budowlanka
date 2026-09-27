@@ -183,7 +183,8 @@ data class EstimateWorkEntity(
     val quantity: Double = 0.0,
     val quantitySource: String = QuantitySource.MANUAL,
     val materialTier: String = MaterialTier.STANDARD,
-    val wastePctOverride: Double? = null
+    val wastePctOverride: Double? = null,
+    val laborRateOverride: Double? = null
 )
 
 @Entity(tableName = "crew_members")
