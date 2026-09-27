@@ -21,7 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pl.edwin.budowlanka.MainViewModel
 import pl.edwin.budowlanka.data.*
 import pl.edwin.budowlanka.domain.EstimateCalculator
-import pl.edwin.budowlanka.domain.EstimateResult
+import pl.edwin.budowlanka.domain.EstimateResult\nimport pl.edwin.budowlanka.domain.SchedulePlanner
 import pl.edwin.budowlanka.util.PdfExporter
 import pl.edwin.budowlanka.util.PdfPayload\nimport kotlinx.coroutines.launch
 
@@ -177,6 +177,12 @@ private fun EstimateOverview(
             SimpleDropdown("Status", e.status, EstimateStatus.all.map { it to it }, { vm.saveEstimate(e.copy(status = it)) })
             OutlinedTextField(e.startDate, { vm.saveEstimate(e.copy(startDate = it)) }, label = { Text("Start RRRR-MM-DD") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(e.endDate, { vm.saveEstimate(e.copy(endDate = it)) }, label = { Text("Koniec RRRR-MM-DD") }, modifier = Modifier.fillMaxWidth())
+            OutlinedButton(onClick = {
+                val p = SchedulePlanner.propose(e.id, result.technicalDays, allEstimates)
+                vm.saveEstimate(e.copy(startDate = p.first, endDate = p.second))
+            }, modifier = Modifier.fillMaxWidth()) {
+                Text("Zaproponuj pierwszy wolny termin")
+            }
         }
 
         Section("Materiały i marża") {
