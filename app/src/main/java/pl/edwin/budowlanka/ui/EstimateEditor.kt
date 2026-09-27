@@ -5,17 +5,23 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pl.edwin.budowlanka.MainViewModel
@@ -51,7 +57,7 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
 
     val estimate = estimates.firstOrNull { it.id == estimateId }
     if (estimate == null) {
-        Box(Modifier.fillMaxSize().padding(20.dp)) {
+        Box(Modifier.fillMaxSize().background(BudBg).padding(20.dp)) {
             Column {
                 Text("Ładowanie wyceny…")
                 TextButton(onClick = onBack) { Text("Wróć") }
@@ -74,26 +80,56 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
         )
     }
 
-    var tab by rememberSaveableCompat { mutableStateOf("Wycena") }
+    var tab by rememberSaveableCompat { mutableStateOf("Dane") }
+    var summaryMode by remember { mutableStateOf("Ekipa") }
+    val steps = listOf("Dane", "Pomieszczenia", "Roboty", "Podsumowanie")
 
-    Column(Modifier.fillMaxSize()) {
-        Surface(tonalElevation = 4.dp) {
-            Column(Modifier.fillMaxWidth().padding(10.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(onClick = onBack) { Text("← Wróć") }
-                    Column {
-                        Text(estimate.title, style = MaterialTheme.typography.titleMedium)
-                        Text(estimate.status, style = MaterialTheme.typography.labelSmall)
-                    }
-                    Text(money(result.clientTotal), style = MaterialTheme.typography.titleMedium)
-                }
+    Column(Modifier.fillMaxSize().background(BudBg)) {
+        Surface(color = Color(0xFF090C0E), shadowElevation = 8.dp) {
+            Column(Modifier.fillMaxWidth()) {
                 Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    listOf("Wycena", "Pomiary", "Roboty", "Ekipa", "Realizacja").forEach {
-                        TextButton(onClick = { tab = it }) {
-                            Text(it, color = if (tab == it) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                    TextButton(onClick = onBack) { Text("‹", style = MaterialTheme.typography.headlineMedium, color = BudText) }
+                    Column(Modifier.weight(1f)) {
+                        Text(estimate.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text("${estimate.status} • ${money(result.clientTotal)}", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                    }
+                    IconButton(onClick = { }) {
+                        androidx.compose.material.icons.Icons.Rounded.MoreVert.let { Icon(it, "Więcej", tint = BudText) }
+                    }
+                }
+
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    steps.forEachIndexed { index, label ->
+                        val selected = tab == label
+                        Column(
+                            modifier = Modifier.weight(1f).clickable { tab = label },
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = if (selected) BudOrange else Color(0xFF60656A),
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        (index + 1).toString(),
+                                        color = if (selected) Color.Black else BudText,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                label,
+                                color = if (selected) BudOrange else BudMuted,
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
                     }
                 }
@@ -102,11 +138,46 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
 
         Box(Modifier.fillMaxSize()) {
             when (tab) {
-                "Wycena" -> EstimateOverview(vm, estimate, result, clients, sites, estimates, works, allLines, materials, workMaterials, tools, workTools, allSpaces, allCrew, allExtras)
-                "Pomiary" -> MeasurementsTab(vm, estimate, spaces)
+                "Dane" -> EstimateOverview(vm, estimate, result, clients, sites, estimates, works, allLines, materials, workMaterials, tools, workTools, allSpaces, allCrew, allExtras)
+                "Pomieszczenia" -> MeasurementsTab(vm, estimate, spaces)
                 "Roboty" -> WorksTab(vm, estimate, works, materials, packages, packageWorks, spaces, lines, result)
-                "Ekipa" -> CrewTab(vm, estimate, crewMembers, crew, result)
-                else -> RealizationTab(vm, estimate, result, works, lines, materials, clients, sites, crewMembers, crew, extras, spaces, photos.filter { it.estimateId == estimateId }, shopping.filter { it.estimateId == estimateId }, toolChecklist.filter { it.estimateId == estimateId }, tools, settings)
+                else -> Column(Modifier.fillMaxSize().background(BudBg)) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Ekipa", "Realizacja").forEach { item ->
+                            val selected = summaryMode == item
+                            Surface(
+                                color = if (selected) BudOrange else BudPanel2,
+                                shape = RoundedCornerShape(9.dp),
+                                modifier = Modifier.weight(1f).clickable { summaryMode = item }
+                            ) {
+                                Text(
+                                    item,
+                                    color = if (selected) Color.Black else BudText,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(vertical = 10.dp),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                    Box(Modifier.weight(1f)) {
+                        if (summaryMode == "Ekipa") {
+                            CrewTab(vm, estimate, crewMembers, crew, result)
+                        } else {
+                            RealizationTab(
+                                vm, estimate, result, works, lines, materials, clients, sites,
+                                crewMembers, crew, extras, spaces,
+                                photos.filter { it.estimateId == estimateId },
+                                shopping.filter { it.estimateId == estimateId },
+                                toolChecklist.filter { it.estimateId == estimateId },
+                                tools, settings
+                            )
+                        }
+                    }
+                }
             }
         }
     }
