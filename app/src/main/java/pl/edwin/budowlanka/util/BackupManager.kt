@@ -82,6 +82,10 @@ object BackupManager {
             "id" to s.id, "estimateId" to s.estimateId, "level" to s.level, "name" to s.name,
             "length" to s.length, "width" to s.width, "height" to s.height, "openingsArea" to s.openingsArea
         ) }))
+        root.put("openings", arr(dao.allOpenings().map { o -> obj(
+            "id" to o.id, "spaceId" to o.spaceId, "type" to o.type, "name" to o.name,
+            "width" to o.width, "height" to o.height, "quantity" to o.quantity
+        ) }))
         root.put("estimateWorks", arr(dao.allEstimateWorks().map { x -> obj(
             "id" to x.id, "estimateId" to x.estimateId, "workId" to x.workId, "spaceId" to x.spaceId,
             "quantity" to x.quantity, "quantitySource" to x.quantitySource,
