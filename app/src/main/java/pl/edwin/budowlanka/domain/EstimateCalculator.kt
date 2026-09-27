@@ -39,6 +39,13 @@ data class EstimateResult(
 )
 
 object EstimateCalculator {
+    fun resolveLaborRate(line: EstimateWorkEntity, work: WorkEntity): Double = when (line.laborPriceMode) {
+        LaborPriceMode.MIN -> work.laborRateLow.takeIf { it > 0.0 } ?: work.laborRate
+        LaborPriceMode.MAX -> work.laborRateHigh.takeIf { it > 0.0 } ?: work.laborRate
+        LaborPriceMode.CUSTOM -> line.laborRateOverride ?: work.laborRate
+        else -> work.laborRate
+    }
+
     fun resolveQuantity(line: EstimateWorkEntity, spaces: List<SpaceEntity>): Double {
         val space = spaces.firstOrNull { it.id == line.spaceId }
         return when (line.quantitySource) {
@@ -76,12 +83,7 @@ object EstimateCalculator {
         estimateWorks.filter { it.estimateId == estimate.id }.forEach { line ->
             val work = works.firstOrNull { it.id == line.workId } ?: return@forEach
             val qty = resolveQuantity(line, spaces.filter { it.estimateId == estimate.id })
-            val laborRate = when (line.laborPriceMode) {
-                LaborPriceMode.MIN -> work.laborRateLow.takeIf { it > 0.0 } ?: work.laborRate
-                LaborPriceMode.MAX -> work.laborRateHigh.takeIf { it > 0.0 } ?: work.laborRate
-                LaborPriceMode.CUSTOM -> line.laborRateOverride ?: work.laborRate
-                else -> work.laborRate
-            }
+            val laborRate = resolveLaborRate(line, work)
             laborBase += qty * laborRate
             laborHours += qty * work.laborHoursPerUnit
 
