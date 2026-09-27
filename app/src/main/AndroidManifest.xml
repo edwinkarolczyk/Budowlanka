@@ -5,8 +5,10 @@
 
     <application
         android:name=".BudowlankaApp"
+        android:icon="@drawable/ic_budowlanka"
+        android:roundIcon="@drawable/ic_budowlanka"
         android:allowBackup="true"
-        android:label="Budowlanka 0.5"
+        android:label="BUDOWLANKA"
         android:theme="@style/Theme.Budowlanka">
         <activity
             android:name=".MainActivity"
