@@ -333,6 +333,7 @@ private fun MaterialDialog(current: MaterialEntity? = null, onDismiss: () -> Uni
     var cheap by remember(current) { mutableStateOf(current?.priceBudget ?: 0.0) }
     var standard by remember(current) { mutableStateOf(current?.priceStandard ?: 0.0) }
     var premium by remember(current) { mutableStateOf(current?.pricePremium ?: 0.0) }
+    var stock by remember(current) { mutableStateOf(current?.stockQty ?: 0.0) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nowy materiał") },
@@ -344,11 +345,12 @@ private fun MaterialDialog(current: MaterialEntity? = null, onDismiss: () -> Uni
                 NumberField("Cena tani", cheap, { cheap = it })
                 NumberField("Cena standard", standard, { standard = it })
                 NumberField("Cena premium", premium, { premium = it })
+                NumberField("Stan własny", stock, { stock = it })
             }
         },
         confirmButton = {
             Button(onClick = {
-                onSave(MaterialEntity(id = current?.id ?: 0L, name = name.ifBlank { "Nowy materiał" }, unit = unit, manufacturer = manufacturer, priceBudget = cheap, priceStandard = standard, pricePremium = premium, stockQty = current?.stockQty ?: 0.0, active = current?.active ?: true))
+                onSave(MaterialEntity(id = current?.id ?: 0L, name = name.ifBlank { "Nowy materiał" }, unit = unit, manufacturer = manufacturer, priceBudget = cheap, priceStandard = standard, pricePremium = premium, stockQty = stock, active = current?.active ?: true))
             }) { Text("Zapisz") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
