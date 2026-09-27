@@ -59,6 +59,58 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun duplicateEstimate(sourceId: Long, onCreated: (Long) -> Unit = {}) = viewModelScope.launch {
+        val source = dao.getEstimate(sourceId) ?: return@launch
+        val newId = dao.upsertEstimate(
+            source.copy(
+                id = 0,
+                title = source.title + " — kopia",
+                status = EstimateStatus.DRAFT,
+                createdAt = System.currentTimeMillis(),
+                startDate = "",
+                endDate = "",
+                signatureData = ""
+            )
+        )
+
+        val spaceMap = mutableMapOf<Long, Long>()
+        dao.allSpaces().filter { it.estimateId == sourceId }.forEach { old ->
+            val copiedId = dao.upsertSpace(old.copy(id = 0, estimateId = newId))
+            spaceMap[old.id] = copiedId
+        }
+
+        dao.allEstimateWorks().filter { it.estimateId == sourceId }.forEach { old ->
+            dao.upsertEstimateWork(
+                old.copy(
+                    id = 0,
+                    estimateId = newId,
+                    spaceId = old.spaceId?.let { spaceMap[it] }
+                )
+            )
+        }
+
+        dao.allEstimateCrew().filter { it.estimateId == sourceId }.forEach { old ->
+            dao.upsertEstimateCrew(old.copy(estimateId = newId))
+        }
+
+        dao.allExtraCosts().filter { it.estimateId == sourceId }.forEach { old ->
+            dao.upsertExtraCost(old.copy(id = 0, estimateId = newId))
+        }
+
+        dao.allPhotos().filter { it.estimateId == sourceId }.forEach { old ->
+            dao.upsertPhoto(
+                old.copy(
+                    id = 0,
+                    estimateId = newId,
+                    spaceId = old.spaceId?.let { spaceMap[it] },
+                    estimateWorkId = null
+                )
+            )
+        }
+
+        onCreated(newId)
+    }
+
     fun addWork(v: WorkEntity) = viewModelScope.launch { dao.upsertWork(v) }
     fun deleteWork(v: WorkEntity) = viewModelScope.launch { dao.deleteWork(v) }
 
@@ -95,9 +147,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun addSpace(v: SpaceEntity) = viewModelScope.launch { dao.upsertSpace(v) }
     fun deleteSpace(v: SpaceEntity) = viewModelScope.launch { dao.deleteSpace(v) }
+    fun duplicateSpace(v: SpaceEntity) = viewModelScope.launch {
+        dao.upsertSpace(v.copy(id = 0, name = v.name + " — kopia"))
+    }
 
     fun addEstimateWork(v: EstimateWorkEntity) = viewModelScope.launch { dao.upsertEstimateWork(v) }
     fun deleteEstimateWork(v: EstimateWorkEntity) = viewModelScope.launch { dao.deleteEstimateWork(v) }
+    fun duplicateEstimateWork(v: EstimateWorkEntity) = viewModelScope.launch {
+        dao.upsertEstimateWork(v.copy(id = 0))
+    }
+    fun deleteEstimateWorks(items: List<EstimateWorkEntity>) = viewModelScope.launch {
+        items.forEach { dao.deleteEstimateWork(it) }
+    }
 
     fun addPackageToEstimate(estimateId: Long, packageId: Long) = viewModelScope.launch {
         val existing = dao.allEstimateWorks().filter { it.estimateId == estimateId }.map { it.workId }.toSet()
