@@ -93,6 +93,7 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
     }
 
     var tab by rememberSaveableCompat { mutableStateOf("Klient") }
+    var bottomSummaryExpanded by rememberSaveableCompat { mutableStateOf(false) }
     val steps = listOf("Klient", "Wymiary", "Roboty", "Plan", "Wycena")
 
     Column(Modifier.fillMaxSize().background(BudBg)) {
@@ -159,7 +160,7 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
             }
         }
 
-        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f).fillMaxWidth()) {
             when (tab) {
                 "Klient" -> ClientStep(vm, estimate, clients, sites)
                 "Wymiary" -> MeasurementsTab(
@@ -179,6 +180,132 @@ fun EstimateEditor(vm: MainViewModel, estimateId: Long, onBack: () -> Unit) {
                     toolChecklist.filter { it.estimateId == estimateId },
                     settings
                 )
+            }
+        }
+
+        EstimateBottomBar(
+            steps = steps,
+            currentStep = tab,
+            lineCount = lines.size,
+            result = result,
+            expanded = bottomSummaryExpanded,
+            onToggleExpanded = { bottomSummaryExpanded = !bottomSummaryExpanded },
+            onPrevious = {
+                val index = steps.indexOf(tab)
+                if (index > 0) tab = steps[index - 1]
+            },
+            onNext = {
+                val index = steps.indexOf(tab)
+                if (index in 0 until steps.lastIndex) tab = steps[index + 1]
+            }
+        )
+    }
+}
+
+@Composable
+private fun EstimateBottomBar(
+    steps: List<String>,
+    currentStep: String,
+    lineCount: Int,
+    result: EstimateResult,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
+) {
+    val index = steps.indexOf(currentStep).coerceAtLeast(0)
+    val hasPrevious = index > 0
+    val hasNext = index < steps.lastIndex
+
+    Surface(
+        color = Color(0xFF0D1114),
+        shadowElevation = 14.dp
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggleExpanded() }
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Kosztorys • $lineCount ${if (lineCount == 1) "pozycja" else "pozycji"}",
+                        color = BudMuted,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    Text(
+                        money(result.clientTotal),
+                        color = BudOrange,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Text(
+                    if (expanded) "▼" else "▲",
+                    color = BudOrangeLight,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (expanded) {
+                HorizontalDivider(color = BudLine)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Robocizna", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                        Text(money(result.laborSell), fontWeight = FontWeight.SemiBold)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text("Materiały", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                        Text(money(result.materialSell), fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Dojazd", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                        Text(money(result.travelCost), fontWeight = FontWeight.SemiBold)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text("Dodatkowe", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                        Text(money(result.extraCosts), fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onPrevious,
+                    enabled = hasPrevious,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(if (hasPrevious) "← ${steps[index - 1]}" else "Początek")
+                }
+                Button(
+                    onClick = onNext,
+                    enabled = hasNext,
+                    modifier = Modifier.weight(1.35f),
+                    colors = ButtonDefaults.buttonColors(containerColor = BudOrangeStrong)
+                ) {
+                    Text(
+                        if (hasNext) "Dalej: ${steps[index + 1]} →" else "Ostatni krok",
+                        color = if (hasNext) Color.Black else BudMuted,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
@@ -1037,6 +1164,7 @@ private fun WorksTab(
     var add by remember { mutableStateOf(false) }
     var edit by remember { mutableStateOf<EstimateWorkEntity?>(null) }
     var query by remember { mutableStateOf("") }
+    var selectionMode by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
 
     LaunchedEffect(lines.map { it.id }) {
@@ -1064,15 +1192,56 @@ private fun WorksTab(
             Text(money(result.clientTotal), color = BudOrange, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
             Button(onClick = { add = true }) { Text("+ Robota") }
-            if (selectedIds.isNotEmpty()) {
+            if (!selectionMode && lines.isNotEmpty()) {
                 OutlinedButton(onClick = {
-                    val chosen = lines.filter { it.id in selectedIds }
-                    vm.deleteEstimateWorks(chosen)
+                    selectionMode = true
                     selectedIds = emptySet()
                 }) {
-                    Text("Usuń zaznaczone (${selectedIds.size})")
+                    Text("Wybierz do usunięcia")
+                }
+            }
+            if (selectionMode) {
+                OutlinedButton(onClick = {
+                    selectionMode = false
+                    selectedIds = emptySet()
+                }) {
+                    Text("Anuluj")
+                }
+            }
+        }
+
+        if (selectionMode) {
+            Surface(
+                color = BudSelectedSoft,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Tryb usuwania • zaznacz pozycje",
+                        modifier = Modifier.weight(1f),
+                        color = BudOrangeLight,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Button(
+                        onClick = {
+                            val chosen = lines.filter { it.id in selectedIds }
+                            vm.deleteEstimateWorks(chosen)
+                            selectedIds = emptySet()
+                            selectionMode = false
+                        },
+                        enabled = selectedIds.isNotEmpty()
+                    ) {
+                        Text("Usuń (${selectedIds.size})")
+                    }
                 }
             }
         }
@@ -1103,17 +1272,20 @@ private fun WorksTab(
             val qty = EstimateCalculator.resolveQuantity(line, spaces)
             val unitRate = EstimateCalculator.resolveLaborRate(line, work)
             val laborValue = qty * unitRate
-            val selected = line.id in selectedIds
+            val selectedForDelete = line.id in selectedIds
 
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = if (selected) BudSelectedSoft else BudPanel
+                    containerColor = if (selectionMode && selectedForDelete) BudSelectedSoft else BudPanel
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(
-                        if (selected) Modifier.border(2.dp, BudOrangeStrong, RoundedCornerShape(12.dp))
-                        else Modifier
+                        if (selectionMode && selectedForDelete) {
+                            Modifier.border(2.dp, BudOrangeStrong, RoundedCornerShape(12.dp))
+                        } else {
+                            Modifier
+                        }
                     )
             ) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -1121,17 +1293,33 @@ private fun WorksTab(
                         Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Checkbox(
-                            checked = selected,
-                            onCheckedChange = { checked ->
-                                selectedIds = if (checked) selectedIds + line.id else selectedIds - line.id
-                            },
-                            colors = CheckboxDefaults.colors(
-                                checkedColor = BudOrangeStrong,
-                                checkmarkColor = Color.Black,
-                                uncheckedColor = BudMuted
+                        if (selectionMode) {
+                            Checkbox(
+                                checked = selectedForDelete,
+                                onCheckedChange = { checked ->
+                                    selectedIds = if (checked) selectedIds + line.id else selectedIds - line.id
+                                },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = BudOrangeStrong,
+                                    checkmarkColor = Color.Black,
+                                    uncheckedColor = BudMuted
+                                )
                             )
-                        )
+                        } else {
+                            Surface(
+                                color = BudSelectedSoft,
+                                shape = RoundedCornerShape(99.dp),
+                                modifier = Modifier.padding(end = 10.dp)
+                            ) {
+                                Text(
+                                    "✓ Dodano",
+                                    color = BudOrangeLight,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
                         Column(Modifier.weight(1f)) {
                             Text(work.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             val room = spaces.firstOrNull { it.id == line.spaceId }?.name
@@ -1139,7 +1327,7 @@ private fun WorksTab(
                         }
                         Text(
                             money(laborValue),
-                            color = if (selected) BudOrangeLight else BudOrange,
+                            color = if (selectionMode && selectedForDelete) BudOrangeLight else BudOrange,
                             fontWeight = FontWeight.Bold
                         )
                     }

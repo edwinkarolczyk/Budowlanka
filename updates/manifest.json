@@ -1,6 +1,6 @@
 {
-  "versionCode": 23,
-  "versionName": "0.5.18",
-  "changelog": "Stabilizacja długich sesji: po 10 godzinach aktywnego licznika aplikacja wysyła osobne powiadomienie ostrzegawcze z akcjami PAUZA i STOP. Przypomnienie jest planowane przez AlarmManager, więc nie zależy od życia procesu aplikacji; po restarcie telefonu lub procesu zostaje odtworzone z Room. Ostrzeżenie jest idempotentne dla danej sesji i nie spamuje przy kolejnych uruchomieniach. Bez migracji bazy.",
+  "versionCode": 24,
+  "versionName": "0.5.19",
+  "changelog": "Uproszczono kreator kosztorysu: stały dolny pasek pokazuje liczbę pozycji, bieżącą sumę, rozwijane rozbicie kosztów oraz prowadzi Wstecz/Dalej między krokami. Na kartach robót checkbox zastąpiono jednoznacznym znacznikiem „✓ Dodano”; checkboxy pojawiają się tylko po wejściu w jawny tryb usuwania wielu pozycji. Bez zmian bazy i danych.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
