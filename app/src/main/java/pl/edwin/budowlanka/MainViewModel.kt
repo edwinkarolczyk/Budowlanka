@@ -136,7 +136,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleWorkFavorite(v: WorkEntity) = viewModelScope.launch {
         dao.upsertWork(v.copy(isFavorite = !v.isFavorite))
     }
-    fun deleteWork(v: WorkEntity) = viewModelScope.launch { dao.deleteWork(v) }
+    fun deleteWork(v: WorkEntity) = viewModelScope.launch { dao.archiveWork(v.id) }
 
     fun addMaterial(v: MaterialEntity) = viewModelScope.launch {
         val id = dao.upsertMaterial(v)
@@ -149,20 +149,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             )
         )
     }
-    fun deleteMaterial(v: MaterialEntity) = viewModelScope.launch { dao.deleteMaterial(v) }
+    fun deleteMaterial(v: MaterialEntity) = viewModelScope.launch { dao.archiveMaterial(v.id) }
 
     fun linkMaterial(workId: Long, materialId: Long, qty: Double) = viewModelScope.launch {
-        dao.upsertWorkMaterial(WorkMaterialEntity(workId, materialId, qty))
+        val material = dao.allMaterials().firstOrNull { it.id == materialId && it.active } ?: return@launch
+        val work = dao.allWorks().firstOrNull { it.id == workId && it.active } ?: return@launch
+        dao.upsertWorkMaterial(WorkMaterialEntity(work.id, material.id, qty))
     }
 
     fun addTool(v: ToolEntity) = viewModelScope.launch { dao.upsertTool(v) }
-    fun deleteTool(v: ToolEntity) = viewModelScope.launch { dao.deleteTool(v) }
+    fun deleteTool(v: ToolEntity) = viewModelScope.launch { dao.archiveTool(v.id) }
     fun linkTool(workId: Long, toolId: Long, qty: Int = 1) = viewModelScope.launch {
-        dao.upsertWorkTool(WorkToolEntity(workId, toolId, qty))
+        val tool = dao.allTools().firstOrNull { it.id == toolId && it.active } ?: return@launch
+        val work = dao.allWorks().firstOrNull { it.id == workId && it.active } ?: return@launch
+        dao.upsertWorkTool(WorkToolEntity(work.id, tool.id, qty))
     }
 
     fun addPackage(v: PackageEntity) = viewModelScope.launch { dao.upsertPackage(v) }
     fun addWorkToPackage(packageId: Long, workId: Long, position: Int) = viewModelScope.launch {
+        if (dao.allWorks().none { it.id == workId && it.active }) return@launch
         dao.upsertPackageWork(PackageWorkEntity(packageId, workId, position))
     }
 
@@ -214,7 +219,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         refreshOpeningArea(newId)
     }
 
-    fun addEstimateWork(v: EstimateWorkEntity) = viewModelScope.launch { dao.upsertEstimateWork(v) }
+    fun addEstimateWork(v: EstimateWorkEntity) = viewModelScope.launch {
+        if (v.id == 0L && dao.allWorks().none { it.id == v.workId && it.active }) return@launch
+        dao.upsertEstimateWork(v)
+    }
     fun deleteEstimateWork(v: EstimateWorkEntity) = viewModelScope.launch { dao.deleteEstimateWork(v) }
     fun duplicateEstimateWork(v: EstimateWorkEntity) = viewModelScope.launch {
         dao.upsertEstimateWork(v.copy(id = 0))
@@ -225,8 +233,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun addPackageToEstimate(estimateId: Long, packageId: Long) = viewModelScope.launch {
         val existing = dao.allEstimateWorks().filter { it.estimateId == estimateId }.map { it.workId }.toSet()
+        val activeWorkIds = dao.allWorks().filter { it.active }.map { it.id }.toSet()
         dao.allPackageWorks().filter { it.packageId == packageId }.sortedBy { it.position }.forEach { pw ->
-            if (pw.workId !in existing) {
+            if (pw.workId !in existing && pw.workId in activeWorkIds) {
                 dao.upsertEstimateWork(
                     EstimateWorkEntity(
                         estimateId = estimateId,

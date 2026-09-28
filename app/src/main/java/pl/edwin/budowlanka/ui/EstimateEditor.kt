@@ -1213,7 +1213,8 @@ private fun WorkLineDialog(
     onDismiss: () -> Unit,
     onSave: (EstimateWorkEntity) -> Unit
 ) {
-    var workId by remember { mutableStateOf(current?.workId ?: works.firstOrNull()?.id ?: 0L) }
+    val selectableWorks = works.filter { it.active || it.id == current?.workId }
+    var workId by remember { mutableStateOf(current?.workId ?: selectableWorks.firstOrNull()?.id ?: 0L) }
     var workSearch by remember { mutableStateOf("") }
     var spaceId by remember { mutableStateOf(current?.spaceId ?: 0L) }
     var source by remember { mutableStateOf(current?.quantitySource ?: QuantitySource.MANUAL) }
@@ -1242,7 +1243,7 @@ private fun WorkLineDialog(
         }
     }
 
-    val filteredWorks = works.filter {
+    val filteredWorks = selectableWorks.filter {
         workSearch.isBlank() ||
             it.name.contains(workSearch, ignoreCase = true) ||
             it.category.contains(workSearch, ignoreCase = true)

@@ -218,7 +218,7 @@ fun CatalogScreen(vm: MainViewModel) {
             "Moje" -> work.isUserDefined
             else -> true
         }
-        matchesQuery && matchesFilter
+        work.active && matchesQuery && matchesFilter
     }
 
     val categoryIcons: Map<String, ImageVector> = mapOf(
@@ -382,7 +382,7 @@ fun CatalogScreen(vm: MainViewModel) {
 
             "Materiały" -> {
                 Button(onClick = { addMaterial = true }) { Text("+ Dodaj materiał") }
-                materials.filter { query.isBlank() || it.name.contains(query, true) }.forEach { m ->
+                materials.filter { it.active && (query.isBlank() || it.name.contains(query, true)) }.forEach { m ->
                     Card(colors = CardDefaults.cardColors(containerColor = BudPanel), modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(m.name, fontWeight = FontWeight.SemiBold)
@@ -453,14 +453,15 @@ fun CatalogScreen(vm: MainViewModel) {
     }
 
     linkWorkId?.let { wid ->
-        var selected by remember { mutableStateOf(materials.firstOrNull()?.id ?: 0L) }
+        val activeMaterials = materials.filter { it.active }
+        var selected by remember { mutableStateOf(activeMaterials.firstOrNull()?.id ?: 0L) }
         var qty by remember { mutableStateOf(1.0) }
         AlertDialog(
             onDismissRequest = { linkWorkId = null },
             title = { Text("Materiał do roboty") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SimpleDropdown("Materiał", selected.toString(), materials.map { it.id.toString() to it.name }) { selected = it.toLongOrNull() ?: 0L }
+                    SimpleDropdown("Materiał", selected.toString(), activeMaterials.map { it.id.toString() to it.name }) { selected = it.toLongOrNull() ?: 0L }
                     NumberField("Zużycie na jednostkę roboty", qty, { qty = it })
                 }
             },
@@ -475,12 +476,13 @@ fun CatalogScreen(vm: MainViewModel) {
     }
 
     packageId?.let { pid ->
-        var selected by remember { mutableStateOf(works.firstOrNull()?.id ?: 0L) }
+        val activeWorks = works.filter { it.active }
+        var selected by remember { mutableStateOf(activeWorks.firstOrNull()?.id ?: 0L) }
         AlertDialog(
             onDismissRequest = { packageId = null },
             title = { Text("Dodaj robotę do pakietu") },
             text = {
-                SimpleDropdown("Robota", selected.toString(), works.map { it.id.toString() to it.name }) { selected = it.toLongOrNull() ?: 0L }
+                SimpleDropdown("Robota", selected.toString(), activeWorks.map { it.id.toString() to it.name }) { selected = it.toLongOrNull() ?: 0L }
             },
             confirmButton = {
                 Button(onClick = {
@@ -749,7 +751,7 @@ fun ToolsScreen(vm: MainViewModel) {
             Text("Narzędzia", style = MaterialTheme.typography.headlineSmall)
             Button(onClick = { add = true }) { Text("+ Narzędzie") }
         }
-        tools.forEach { t ->
+        tools.filter { it.active }.forEach { t ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(t.name, style = MaterialTheme.typography.titleMedium)
@@ -791,14 +793,15 @@ fun ToolsScreen(vm: MainViewModel) {
     }
 
     linkToolId?.let { toolId ->
-        var workId by remember { mutableStateOf(works.firstOrNull()?.id ?: 0L) }
+        val activeWorks = works.filter { it.active }
+        var workId by remember { mutableStateOf(activeWorks.firstOrNull()?.id ?: 0L) }
         var qty by remember { mutableStateOf(1) }
         AlertDialog(
             onDismissRequest = { linkToolId = null },
             title = { Text("Przypisz narzędzie") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SimpleDropdown("Robota", workId.toString(), works.map { it.id.toString() to it.name }) {
+                    SimpleDropdown("Robota", workId.toString(), activeWorks.map { it.id.toString() to it.name }) {
                         workId = it.toLongOrNull() ?: 0L
                     }
                     IntField("Ilość", qty, { qty = it.coerceAtLeast(1) })

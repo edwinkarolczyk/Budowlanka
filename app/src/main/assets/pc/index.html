@@ -551,9 +551,9 @@ function renderCalendar(){
 function renderCatalog(){
   if(!snapshot) return;
   const qW=byId('workSearch').value.trim().toLowerCase(), qM=byId('materialSearch').value.trim().toLowerCase(), qT=byId('toolSearch').value.trim().toLowerCase();
-  const works=arr(data(),'works').filter(w=>!qW||[w.name,w.category,w.unit].join(' ').toLowerCase().includes(qW));
-  const mats=arr(data(),'materials').filter(m=>!qM||[m.name,m.manufacturer,m.unit].join(' ').toLowerCase().includes(qM));
-  const tools=arr(data(),'tools').filter(t=>!qT||[t.name,t.code,t.notes].join(' ').toLowerCase().includes(qT));
+  const works=arr(data(),'works').filter(w=>w.active!==false&&(!qW||[w.name,w.category,w.unit].join(' ').toLowerCase().includes(qW)));
+  const mats=arr(data(),'materials').filter(m=>m.active!==false&&(!qM||[m.name,m.manufacturer,m.unit].join(' ').toLowerCase().includes(qM)));
+  const tools=arr(data(),'tools').filter(t=>t.active!==false&&(!qT||[t.name,t.code,t.notes].join(' ').toLowerCase().includes(qT)));
   byId('workList').innerHTML=works.slice(0,250).map(w=>'<div class="listItem"><strong>'+esc(w.name)+'</strong><div>'+esc(w.category)+' • '+esc(w.unit)+' • '+money(w.laborRate)+'</div><div class="muted">Obmiar: '+esc(w.defaultQuantitySource||'MANUAL')+' • '+num(w.laborHoursPerUnit)+' r-g/j.</div></div>').join('')||'<div class="empty">Brak pozycji.</div>';
   byId('materialList').innerHTML=mats.slice(0,250).map(m=>'<div class="listItem"><strong>'+esc(m.name)+'</strong><div>'+esc(m.manufacturer||'')+' • '+esc(m.unit)+'</div><div class="muted">Tani '+money(m.priceBudget)+' • Standard '+money(m.priceStandard)+' • Premium '+money(m.pricePremium)+'</div></div>').join('')||'<div class="empty">Brak pozycji.</div>';
   byId('toolList').innerHTML=tools.slice(0,250).map(t=>'<div class="listItem"><strong>'+esc(t.name)+'</strong><div>'+esc(t.code||'bez kodu')+'</div><div class="muted">'+esc(t.notes||'')+'</div></div>').join('')||'<div class="empty">Brak pozycji.</div>';

@@ -92,6 +92,15 @@ interface AppDao {
     @Delete suspend fun deleteExtraCost(v: ExtraCostEntity)
     @Delete suspend fun deletePhoto(v: PhotoEntity)
 
+    @Query("UPDATE works SET active = 0 WHERE id = :id")
+    suspend fun archiveWork(id: Long)
+
+    @Query("UPDATE materials SET active = 0 WHERE id = :id")
+    suspend fun archiveMaterial(id: Long)
+
+    @Query("UPDATE tools SET active = 0 WHERE id = :id")
+    suspend fun archiveTool(id: Long)
+
     @Query("""
         UPDATE photos
         SET spaceId = NULL, estimateWorkId = NULL
