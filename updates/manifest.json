@@ -1,6 +1,6 @@
 {
-  "versionCode": 22,
-  "versionName": "0.5.17",
-  "changelog": "Stabilizacja START/STOP: tworzenie i kończenie sesji czasu jest teraz wykonywane atomowo w transakcjach Room. Podwójny START nie utworzy drugiego zestawu sesji, a równoczesny STOP z aplikacji i z powiadomienia nie zapisze podwójnych zdarzeń STOP/PAUZA. Widok aplikacji i akcje powiadomienia korzystają z tej samej logiki bazy. Bez migracji.",
+  "versionCode": 23,
+  "versionName": "0.5.18",
+  "changelog": "Stabilizacja długich sesji: po 10 godzinach aktywnego licznika aplikacja wysyła osobne powiadomienie ostrzegawcze z akcjami PAUZA i STOP. Przypomnienie jest planowane przez AlarmManager, więc nie zależy od życia procesu aplikacji; po restarcie telefonu lub procesu zostaje odtworzone z Room. Ostrzeżenie jest idempotentne dla danej sesji i nie spamuje przy kolejnych uruchomieniach. Bez migracji bazy.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
