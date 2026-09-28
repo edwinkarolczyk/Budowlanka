@@ -82,9 +82,23 @@ interface AppDao {
     @Delete suspend fun deleteWork(v: WorkEntity)
     @Delete suspend fun deleteMaterial(v: MaterialEntity)
     @Delete suspend fun deleteTool(v: ToolEntity)
-    @Delete suspend fun deleteClient(v: ClientEntity)
-    @Delete suspend fun deleteSite(v: SiteEntity)
-    @Delete suspend fun deleteEstimate(v: EstimateEntity)
+    @Query("DELETE FROM clients WHERE id = :id")
+    suspend fun deleteClientById(id: Long)
+
+    @Query("DELETE FROM sites WHERE id = :id")
+    suspend fun deleteSiteById(id: Long)
+
+    @Query("DELETE FROM estimates WHERE id = :id")
+    suspend fun deleteEstimateById(id: Long)
+
+    @Query("SELECT COUNT(*) FROM estimates WHERE clientId = :clientId")
+    suspend fun countEstimatesForClient(clientId: Long): Int
+
+    @Query("SELECT COUNT(*) FROM sites WHERE clientId = :clientId")
+    suspend fun countSitesForClient(clientId: Long): Int
+
+    @Query("SELECT COUNT(*) FROM estimates WHERE siteId = :siteId")
+    suspend fun countEstimatesForSite(siteId: Long): Int
     @Delete suspend fun deleteSpace(v: SpaceEntity)
     @Delete suspend fun deleteEstimateWork(v: EstimateWorkEntity)
     @Delete suspend fun deleteOpening(v: OpeningEntity)
@@ -118,12 +132,81 @@ interface AppDao {
     @Query("DELETE FROM spaces WHERE id = :spaceId")
     suspend fun deleteSpaceById(spaceId: Long)
 
+    @Query("DELETE FROM openings WHERE spaceId IN (SELECT id FROM spaces WHERE estimateId = :estimateId)")
+    suspend fun deleteOpeningsForEstimate(estimateId: Long)
+
+    @Query("DELETE FROM estimate_works WHERE estimateId = :estimateId")
+    suspend fun deleteEstimateWorksForEstimate(estimateId: Long)
+
+    @Query("DELETE FROM estimate_crew WHERE estimateId = :estimateId")
+    suspend fun deleteCrewForEstimate(estimateId: Long)
+
+    @Query("DELETE FROM extra_costs WHERE estimateId = :estimateId")
+    suspend fun deleteExtraCostsForEstimate(estimateId: Long)
+
+    @Query("DELETE FROM photos WHERE estimateId = :estimateId")
+    suspend fun deletePhotosForEstimate(estimateId: Long)
+
+    @Query("DELETE FROM shopping_items WHERE estimateId = :estimateId")
+    suspend fun deleteShoppingForEstimate(estimateId: Long)
+
+    @Query("DELETE FROM tool_checklist WHERE estimateId = :estimateId")
+    suspend fun deleteToolsForEstimate(estimateId: Long)
+
+    @Query("DELETE FROM work_session_events WHERE estimateId = :estimateId")
+    suspend fun deleteWorkSessionEventsForEstimate(estimateId: Long)
+
+    @Query("DELETE FROM work_sessions WHERE estimateId = :estimateId")
+    suspend fun deleteWorkSessionsForEstimate(estimateId: Long)
+
+    @Query("DELETE FROM spaces WHERE estimateId = :estimateId")
+    suspend fun deleteSpacesForEstimate(estimateId: Long)
+
     @Transaction
     suspend fun deleteSpaceSafely(spaceId: Long) {
         detachPhotosFromSpace(spaceId)
         deleteOpeningsForSpace(spaceId)
         deleteEstimateWorksForSpace(spaceId)
         deleteSpaceById(spaceId)
+    }
+
+    @Transaction
+    suspend fun deleteEstimateSafely(estimateId: Long): Boolean {
+        val estimate = getEstimate(estimateId) ?: return false
+
+        // Stabilizacja: nie kasujemy historii realizacji. Fizyczne usunięcie
+        // jest dozwolone wyłącznie dla szkicu, który nie ma uruchomionych sesji.
+        if (estimate.status != EstimateStatus.DRAFT) return false
+        if (activeWorkSessions(estimateId).isNotEmpty()) return false
+
+        deleteOpeningsForEstimate(estimateId)
+        deleteEstimateWorksForEstimate(estimateId)
+        deleteCrewForEstimate(estimateId)
+        deleteExtraCostsForEstimate(estimateId)
+        deletePhotosForEstimate(estimateId)
+        deleteShoppingForEstimate(estimateId)
+        deleteToolsForEstimate(estimateId)
+        deleteWorkSessionEventsForEstimate(estimateId)
+        deleteWorkSessionsForEstimate(estimateId)
+        deleteSpacesForEstimate(estimateId)
+        deleteEstimateById(estimateId)
+        return true
+    }
+
+    @Transaction
+    suspend fun deleteSiteSafely(siteId: Long): Boolean {
+        if (countEstimatesForSite(siteId) > 0) return false
+        deleteSiteById(siteId)
+        return true
+    }
+
+    @Transaction
+    suspend fun deleteClientSafely(clientId: Long): Boolean {
+        // Klient z historią lub adresami nie może zostać fizycznie usunięty.
+        if (countEstimatesForClient(clientId) > 0) return false
+        if (countSitesForClient(clientId) > 0) return false
+        deleteClientById(clientId)
+        return true
     }
 
     @Query("DELETE FROM shopping_items WHERE estimateId=:estimateId")

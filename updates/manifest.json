@@ -1,6 +1,6 @@
 {
-  "versionCode": 19,
-  "versionName": "0.5.14",
-  "changelog": "Stabilizacja danych katalogowych: przyciski Usuń dla robót, materiałów i narzędzi nie kasują już rekordów użytych w kosztorysach i historii, tylko bezpiecznie je archiwizują. Pozycje archiwalne znikają z normalnych list i nowych wyborów, ale pozostają dostępne dla istniejących zleceń, powiązań i historii. Dodano też blokadę tworzenia nowych powiązań z pozycjami archiwalnymi. Bez migracji bazy.",
+  "versionCode": 20,
+  "versionName": "0.5.15",
+  "changelog": "Stabilizacja kasowania danych nadrzędnych: całe zlecenie może zostać fizycznie usunięte tylko jako szkic i jest wtedy czyszczone transakcyjnie razem z pomieszczeniami, otworami, robotami, ekipą, kosztami, zdjęciami, zakupami, checklistą oraz sesjami czasu. Klient i adres są blokowane przed usunięciem, jeśli mają powiązane zlecenia lub historię. Bez migracji bazy.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
