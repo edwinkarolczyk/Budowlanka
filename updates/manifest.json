@@ -1,6 +1,6 @@
 {
-  "versionCode": 18,
-  "versionName": "0.5.13",
-  "changelog": "Stabilizacja integralności danych: usunięcie pomieszczenia jest teraz jedną transakcją. Razem z pomieszczeniem usuwane są jego otwory i przypisane roboty, a zdjęcia są zachowywane i odpinane do poziomu zlecenia. Bez zmiany schematu Room i bez migracji bazy.",
+  "versionCode": 19,
+  "versionName": "0.5.14",
+  "changelog": "Stabilizacja danych katalogowych: przyciski Usuń dla robót, materiałów i narzędzi nie kasują już rekordów użytych w kosztorysach i historii, tylko bezpiecznie je archiwizują. Pozycje archiwalne znikają z normalnych list i nowych wyborów, ale pozostają dostępne dla istniejących zleceń, powiązań i historii. Dodano też blokadę tworzenia nowych powiązań z pozycjami archiwalnymi. Bez migracji bazy.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
