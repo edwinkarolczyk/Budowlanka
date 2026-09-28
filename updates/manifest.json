@@ -1,6 +1,6 @@
 {
-  "versionCode": 21,
-  "versionName": "0.5.16",
-  "changelog": "Stabilizacja START/STOP: przy każdym odtworzeniu procesu aplikacji aktywne sesje czasu są ponownie odczytywane z Room i ich powiadomienia zostają automatycznie odbudowane z właściwym czasem startu, ekipą i typem pracy. Ten sam mechanizm działa po restarcie telefonu. Ponowne odtworzenie jest idempotentne — używa tego samego ID powiadomienia i nie tworzy nowych sesji ani duplikatów. Bez migracji bazy.",
+  "versionCode": 22,
+  "versionName": "0.5.17",
+  "changelog": "Stabilizacja START/STOP: tworzenie i kończenie sesji czasu jest teraz wykonywane atomowo w transakcjach Room. Podwójny START nie utworzy drugiego zestawu sesji, a równoczesny STOP z aplikacji i z powiadomienia nie zapisze podwójnych zdarzeń STOP/PAUZA. Widok aplikacji i akcje powiadomienia korzystają z tej samej logiki bazy. Bez migracji.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }

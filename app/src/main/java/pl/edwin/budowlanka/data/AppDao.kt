@@ -225,6 +225,78 @@ interface AppDao {
     @Query("UPDATE work_sessions SET endAt=:endAt, endReason=:endReason, updatedAt=:endAt WHERE estimateId=:estimateId AND endAt IS NULL")
     suspend fun stopActiveWorkSessions(estimateId: Long, endAt: Long, endReason: String)
 
+    @Transaction
+    suspend fun startWorkSessionsSafely(
+        estimateId: Long,
+        type: String,
+        crewIds: List<Long?>,
+        now: Long
+    ): Boolean {
+        if (activeWorkSessions(estimateId).isNotEmpty()) return false
+
+        val estimate = getEstimate(estimateId) ?: return false
+        val workers = crewIds.distinct().ifEmpty { listOf(null) }
+
+        workers.forEach { crewId ->
+            val sessionId = upsertWorkSession(
+                WorkSessionEntity(
+                    estimateId = estimateId,
+                    crewMemberId = crewId,
+                    type = type,
+                    startAt = now,
+                    createdAt = now,
+                    updatedAt = now
+                )
+            )
+            upsertWorkSessionEvent(
+                WorkSessionEventEntity(
+                    estimateId = estimateId,
+                    sessionId = sessionId,
+                    crewMemberId = crewId,
+                    eventType = WorkSessionEventType.START,
+                    at = now,
+                    note = WorkTimeType.label(type)
+                )
+            )
+        }
+
+        if (estimate.status == EstimateStatus.ACCEPTED) {
+            upsertEstimate(estimate.copy(status = EstimateStatus.IN_PROGRESS))
+        }
+        return true
+    }
+
+    @Transaction
+    suspend fun stopWorkSessionsSafely(
+        estimateId: Long,
+        endAt: Long,
+        endReason: String
+    ): Boolean {
+        val active = activeWorkSessions(estimateId)
+        if (active.isEmpty()) return false
+
+        stopActiveWorkSessions(estimateId, endAt, endReason)
+        val eventType = if (endReason == WorkEndReason.PAUSE) {
+            WorkSessionEventType.PAUSE
+        } else {
+            WorkSessionEventType.STOP
+        }
+
+        active.forEach { session ->
+            upsertWorkSessionEvent(
+                WorkSessionEventEntity(
+                    estimateId = estimateId,
+                    sessionId = session.id,
+                    crewMemberId = session.crewMemberId,
+                    eventType = eventType,
+                    at = endAt,
+                    note = WorkTimeType.label(session.type)
+                )
+            )
+        }
+        return true
+    }
+
     @Query("SELECT * FROM estimates WHERE id=:id LIMIT 1")
     suspend fun getEstimate(id: Long): EstimateEntity?
     @Query("SELECT * FROM app_settings WHERE id=1 LIMIT 1")

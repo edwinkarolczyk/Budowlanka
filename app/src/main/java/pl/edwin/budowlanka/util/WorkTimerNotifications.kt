@@ -20,8 +20,6 @@ import pl.edwin.budowlanka.R
 import pl.edwin.budowlanka.data.AppDao
 import pl.edwin.budowlanka.data.AppDatabase
 import pl.edwin.budowlanka.data.WorkEndReason
-import pl.edwin.budowlanka.data.WorkSessionEventEntity
-import pl.edwin.budowlanka.data.WorkSessionEventType
 import pl.edwin.budowlanka.data.WorkTimeType
 
 object WorkTimerNotifications {
@@ -140,33 +138,16 @@ class WorkTimerActionReceiver : BroadcastReceiver() {
             WorkTimerNotifications.ACTION_STOP -> WorkEndReason.STOP
             else -> return
         }
-        val eventType = if (reason == WorkEndReason.PAUSE) {
-            WorkSessionEventType.PAUSE
-        } else {
-            WorkSessionEventType.STOP
-        }
-
         val pending = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 val dao = AppDatabase.get(context.applicationContext).dao()
-                val active = dao.activeWorkSessions(estimateId)
-                if (active.isNotEmpty()) {
-                    val now = System.currentTimeMillis()
-                    dao.stopActiveWorkSessions(estimateId, now, reason)
-                    active.forEach { session ->
-                        dao.upsertWorkSessionEvent(
-                            WorkSessionEventEntity(
-                                estimateId = estimateId,
-                                sessionId = session.id,
-                                crewMemberId = session.crewMemberId,
-                                eventType = eventType,
-                                at = now,
-                                note = WorkTimeType.label(session.type)
-                            )
-                        )
-                    }
-                }
+                val now = System.currentTimeMillis()
+                dao.stopWorkSessionsSafely(
+                    estimateId = estimateId,
+                    endAt = now,
+                    endReason = reason
+                )
                 WorkTimerNotifications.cancel(context, estimateId)
             } finally {
                 pending.finish()
