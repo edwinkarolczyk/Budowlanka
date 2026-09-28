@@ -35,6 +35,11 @@ fun BudowlankaRoot(vm: MainViewModel) {
     var screenName by rememberSaveable { mutableStateOf(RootScreen.DASHBOARD.name) }
     var estimateId by rememberSaveable { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
+    val appVersion = remember(context) {
+        runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "?"
+        }.getOrDefault("?")
+    }
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var updateDismissed by remember { mutableStateOf(false) }
 
@@ -61,8 +66,8 @@ fun BudowlankaRoot(vm: MainViewModel) {
         Triple(RootScreen.ESTIMATES, Icons.Rounded.ReceiptLong, "Kosztorysy"),
         Triple(RootScreen.CLIENTS, Icons.Rounded.Groups, "Klienci"),
         Triple(RootScreen.CALENDAR, Icons.Rounded.CalendarMonth, "Kalendarz"),
-        Triple(RootScreen.CATALOG, Icons.Rounded.Inventory2, "Materiały"),
-        Triple(RootScreen.MORE, Icons.Rounded.MoreHoriz, "Więcej")
+        Triple(RootScreen.CATALOG, Icons.Rounded.Inventory2, "Katalog"),
+        Triple(RootScreen.TOOLS, Icons.Rounded.Handyman, "Narzędzia")
     )
 
     Scaffold(
@@ -90,7 +95,7 @@ fun BudowlankaRoot(vm: MainViewModel) {
                                 color = BudText,
                                 style = MaterialTheme.typography.titleLarge
                             )
-                            Text("v0.5.8", color = BudMuted, style = MaterialTheme.typography.labelSmall)
+                            Text("v$appVersion", color = BudMuted, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                     IconButton(onClick = { screenName = RootScreen.SETTINGS.name }) {
@@ -140,12 +145,7 @@ fun BudowlankaRoot(vm: MainViewModel) {
                     onOpenEstimate = { estimateId = it },
                     onNewEstimate = {
                         vm.addEstimate("Nowy kosztorys") { estimateId = it }
-                    },
-                    onClients = { screenName = RootScreen.CLIENTS.name },
-                    onCatalog = { screenName = RootScreen.CATALOG.name },
-                    onTools = { screenName = RootScreen.TOOLS.name },
-                    onCalendar = { screenName = RootScreen.CALENDAR.name },
-                    onSettings = { screenName = RootScreen.SETTINGS.name }
+                    }
                 )
                 RootScreen.ESTIMATES -> EstimatesScreen(vm, onOpenEstimate = { estimateId = it })
                 RootScreen.CLIENTS -> ClientsScreen(vm)
@@ -153,12 +153,9 @@ fun BudowlankaRoot(vm: MainViewModel) {
                 RootScreen.CATALOG -> CatalogScreen(vm)
                 RootScreen.TOOLS -> ToolsScreen(vm)
                 RootScreen.SETTINGS -> SettingsScreen(vm)
-                RootScreen.MORE -> MoreScreen(
-                    onDashboard = { screenName = RootScreen.DASHBOARD.name },
-                    onCatalog = { screenName = RootScreen.CATALOG.name },
-                    onTools = { screenName = RootScreen.TOOLS.name },
-                    onSettings = { screenName = RootScreen.SETTINGS.name }
-                )
+                RootScreen.MORE -> LaunchedEffect(Unit) {
+                    screenName = RootScreen.DASHBOARD.name
+                }
             }
         }
     }

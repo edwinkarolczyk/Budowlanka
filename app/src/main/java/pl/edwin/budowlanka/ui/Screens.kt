@@ -40,12 +40,7 @@ import pl.edwin.budowlanka.util.UpdateInfo
 fun DashboardScreen(
     vm: MainViewModel,
     onOpenEstimate: (Long) -> Unit,
-    onNewEstimate: () -> Unit = {},
-    onClients: () -> Unit = {},
-    onCatalog: () -> Unit = {},
-    onTools: () -> Unit = {},
-    onCalendar: () -> Unit = {},
-    onSettings: () -> Unit = {}
+    onNewEstimate: () -> Unit = {}
 ) {
     val estimates by vm.estimates.collectAsStateWithLifecycle()
     val works by vm.works.collectAsStateWithLifecycle()
@@ -77,36 +72,22 @@ fun DashboardScreen(
             }
         }
 
-        val tiles = listOf(
-            Triple("Nowy kosztorys", Icons.Rounded.NoteAdd, onNewEstimate),
-            Triple("Klienci", Icons.Rounded.Groups, onClients),
-            Triple("Roboty", Icons.Rounded.Wallpaper, onCatalog),
-            Triple("Materiały", Icons.Rounded.Inventory2, onCatalog),
-            Triple("Pakiety robót", Icons.Rounded.Layers, onCatalog),
-            Triple("Narzędzia", Icons.Rounded.Handyman, onTools),
-            Triple("Realizacje", Icons.Rounded.AssignmentTurnedIn, { }),
-            Triple("Kalendarz", Icons.Rounded.CalendarMonth, onCalendar),
-            Triple("Ustawienia", Icons.Rounded.Settings, onSettings)
-        )
-        tiles.chunked(3).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { (label, icon, action) ->
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = BudPanel),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f).height(92.dp).clickable { action() }
-                    ) {
-                        Column(
-                            Modifier.fillMaxSize().padding(10.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(icon, null, tint = BudOrange, modifier = Modifier.size(30.dp))
-                            Spacer(Modifier.height(7.dp))
-                            Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 2)
-                        }
-                    }
+        Card(
+            colors = CardDefaults.cardColors(containerColor = BudSelectedSoft),
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth().clickable { onNewEstimate() }
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Rounded.NoteAdd, null, tint = BudOrange, modifier = Modifier.size(30.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Nowy kosztorys", fontWeight = FontWeight.Bold)
+                    Text("Szybko rozpocznij nową wycenę", color = BudMuted, style = MaterialTheme.typography.bodySmall)
                 }
+                Icon(Icons.Rounded.ChevronRight, null, tint = BudOrange)
             }
         }
 

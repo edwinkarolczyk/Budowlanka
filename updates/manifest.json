@@ -1,6 +1,6 @@
 {
-  "versionCode": 15,
-  "versionName": "0.5.10",
-  "changelog": "Naprawiono skaczący kursor w Ustawieniach przez oddzielenie edycji pól od zapisu do bazy. NIP przyjmuje wyłącznie 10 cyfr i jest sprawdzany sumą kontrolną. E-mail ma klawiaturę e-mail oraz walidację formatu, telefon klawiaturę telefoniczną. Numer wersji w Ustawieniach jest teraz pobierany z faktycznego buildu.",
+  "versionCode": 16,
+  "versionName": "0.5.11",
+  "changelog": "Naprawiono numer wersji w nagłówku pulpitu — jest pobierany automatycznie z APK. Uporządkowano nawigację: usunięto dublujące kafle Klienci, Materiały, Kalendarz i Ustawienia z pulpitu, połączono katalog w jedno wejście w dolnej nawigacji, Narzędzia przeniesiono bezpośrednio do dolnego paska, usunięto martwy kafel Realizacje. Na pulpicie została tylko szybka akcja Nowy kosztorys.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
