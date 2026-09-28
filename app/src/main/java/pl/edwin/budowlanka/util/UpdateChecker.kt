@@ -7,8 +7,10 @@ import android.os.Environment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.SocketTimeoutException
 
 data class UpdateInfo(
     val versionCode: Int,
@@ -17,12 +19,19 @@ data class UpdateInfo(
     val apkUrl: String
 )
 
+sealed class UpdateCheckResult {
+    object UpToDate : UpdateCheckResult()
+    data class Available(val info: UpdateInfo) : UpdateCheckResult()
+    data class Error(val message: String) : UpdateCheckResult()
+}
+
 object UpdateChecker {
     const val manifestUrl =
         "https://raw.githubusercontent.com/edwinkarolczyk/Budowlanka/development-0.5/updates/manifest.json"
 
-    suspend fun check(context: Context): UpdateInfo? = withContext(Dispatchers.IO) {
-        runCatching {
+    suspend fun checkResult(context: Context): UpdateCheckResult = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
+        try {
             val c = (URL(manifestUrl + "?t=" + System.currentTimeMillis()).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 5000
                 readTimeout = 5000
@@ -31,21 +40,51 @@ object UpdateChecker {
                 setRequestProperty("Cache-Control", "no-cache, no-store")
                 setRequestProperty("Pragma", "no-cache")
             }
+            connection = c
+
+            val responseCode = c.responseCode
+            if (responseCode !in 200..299) {
+                return@withContext UpdateCheckResult.Error(
+                    "Serwer aktualizacji zwrócił HTTP $responseCode."
+                )
+            }
+
             val body = c.inputStream.bufferedReader().use { it.readText() }
-            c.disconnect()
             val j = JSONObject(body)
             val remote = j.getInt("versionCode")
-            val current = context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode.toInt()
+            val current = context.packageManager
+                .getPackageInfo(context.packageName, 0)
+                .longVersionCode
+                .toInt()
+
             if (remote > current) {
-                UpdateInfo(
-                    versionCode = remote,
-                    versionName = j.getString("versionName"),
-                    changelog = j.optString("changelog"),
-                    apkUrl = j.getString("apkUrl")
+                UpdateCheckResult.Available(
+                    UpdateInfo(
+                        versionCode = remote,
+                        versionName = j.getString("versionName"),
+                        changelog = j.optString("changelog"),
+                        apkUrl = j.getString("apkUrl")
+                    )
                 )
-            } else null
-        }.getOrNull()
+            } else {
+                UpdateCheckResult.UpToDate
+            }
+        } catch (_: SocketTimeoutException) {
+            UpdateCheckResult.Error("Przekroczono czas oczekiwania na serwer aktualizacji.")
+        } catch (_: IOException) {
+            UpdateCheckResult.Error("Brak połączenia z internetem lub serwerem aktualizacji.")
+        } catch (_: Exception) {
+            UpdateCheckResult.Error("Nie udało się odczytać informacji o aktualizacji.")
+        } finally {
+            connection?.disconnect()
+        }
     }
+
+    suspend fun check(context: Context): UpdateInfo? =
+        when (val result = checkResult(context)) {
+            is UpdateCheckResult.Available -> result.info
+            else -> null
+        }
 
     fun download(context: Context, info: UpdateInfo) {
         val request = DownloadManager.Request(Uri.parse(info.apkUrl))

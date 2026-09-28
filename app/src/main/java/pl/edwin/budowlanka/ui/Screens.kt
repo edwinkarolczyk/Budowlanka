@@ -33,8 +33,8 @@ import kotlinx.coroutines.launch
 import pl.edwin.budowlanka.MainViewModel
 import pl.edwin.budowlanka.data.*
 import pl.edwin.budowlanka.util.BackupManager
+import pl.edwin.budowlanka.util.UpdateCheckResult
 import pl.edwin.budowlanka.util.UpdateChecker
-import pl.edwin.budowlanka.util.UpdateInfo
 
 @Composable
 fun DashboardScreen(
@@ -941,8 +941,7 @@ fun SettingsScreen(vm: MainViewModel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var addCrew by remember { mutableStateOf(false) }
-    var update by remember { mutableStateOf<UpdateInfo?>(null) }
-    var checked by remember { mutableStateOf(false) }
+    var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
     var nipTouched by remember { mutableStateOf(false) }
     var emailTouched by remember { mutableStateOf(false) }
 
@@ -1161,15 +1160,26 @@ fun SettingsScreen(vm: MainViewModel) {
             Text("Wersja: $versionName")
             Button(onClick = {
                 scope.launch {
-                    update = UpdateChecker.check(context)
-                    checked = true
+                    updateResult = UpdateChecker.checkResult(context)
                 }
             }) { Text("Sprawdź aktualizację") }
-            if (checked && update == null) Text("Brak nowszej wersji lub brak internetu.")
-            update?.let { u ->
-                Text("Dostępna: ${u.versionName}", style = MaterialTheme.typography.titleMedium)
-                Text(u.changelog)
-                Button(onClick = { UpdateChecker.download(context, u) }) { Text("Pobierz APK") }
+            when (val result = updateResult) {
+                null -> Unit
+                UpdateCheckResult.UpToDate -> {
+                    Text("Masz najnowszą wersję.", color = BudGreen)
+                }
+                is UpdateCheckResult.Error -> {
+                    Text(
+                        "Błąd sprawdzania: ${result.message}",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                is UpdateCheckResult.Available -> {
+                    val u = result.info
+                    Text("Dostępna: ${u.versionName}", style = MaterialTheme.typography.titleMedium)
+                    Text(u.changelog)
+                    Button(onClick = { UpdateChecker.download(context, u) }) { Text("Pobierz APK") }
+                }
             }
         }
     }
