@@ -188,7 +188,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun addSite(v: SiteEntity) = viewModelScope.launch { dao.upsertSite(v) }
 
     fun addSpace(v: SpaceEntity) = viewModelScope.launch { dao.upsertSpace(v) }
-    fun deleteSpace(v: SpaceEntity) = viewModelScope.launch { dao.deleteSpace(v) }
+    fun deleteSpace(v: SpaceEntity) = viewModelScope.launch { dao.deleteSpaceSafely(v.id) }
 
     private suspend fun refreshOpeningArea(spaceId: Long) {
         val space = dao.getSpace(spaceId) ?: return

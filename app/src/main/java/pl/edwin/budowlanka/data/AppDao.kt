@@ -92,6 +92,31 @@ interface AppDao {
     @Delete suspend fun deleteExtraCost(v: ExtraCostEntity)
     @Delete suspend fun deletePhoto(v: PhotoEntity)
 
+    @Query("""
+        UPDATE photos
+        SET spaceId = NULL, estimateWorkId = NULL
+        WHERE spaceId = :spaceId
+           OR estimateWorkId IN (SELECT id FROM estimate_works WHERE spaceId = :spaceId)
+    """)
+    suspend fun detachPhotosFromSpace(spaceId: Long)
+
+    @Query("DELETE FROM openings WHERE spaceId = :spaceId")
+    suspend fun deleteOpeningsForSpace(spaceId: Long)
+
+    @Query("DELETE FROM estimate_works WHERE spaceId = :spaceId")
+    suspend fun deleteEstimateWorksForSpace(spaceId: Long)
+
+    @Query("DELETE FROM spaces WHERE id = :spaceId")
+    suspend fun deleteSpaceById(spaceId: Long)
+
+    @Transaction
+    suspend fun deleteSpaceSafely(spaceId: Long) {
+        detachPhotosFromSpace(spaceId)
+        deleteOpeningsForSpace(spaceId)
+        deleteEstimateWorksForSpace(spaceId)
+        deleteSpaceById(spaceId)
+    }
+
     @Query("DELETE FROM shopping_items WHERE estimateId=:estimateId")
     suspend fun clearShopping(estimateId: Long)
     @Query("DELETE FROM tool_checklist WHERE estimateId=:estimateId")

@@ -1,6 +1,6 @@
 {
-  "versionCode": 17,
-  "versionName": "0.5.12",
-  "changelog": "Stabilizacja aktualizatora: ręczne sprawdzanie rozróżnia teraz brak nowej wersji od błędu połączenia, timeoutu, błędu HTTP i nieprawidłowej odpowiedzi manifestu. Bez zmian danych i bazy.",
+  "versionCode": 18,
+  "versionName": "0.5.13",
+  "changelog": "Stabilizacja integralności danych: usunięcie pomieszczenia jest teraz jedną transakcją. Razem z pomieszczeniem usuwane są jego otwory i przypisane roboty, a zdjęcia są zachowywane i odpinane do poziomu zlecenia. Bez zmiany schematu Room i bez migracji bazy.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
