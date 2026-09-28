@@ -1,6 +1,6 @@
 {
-  "versionCode": 14,
-  "versionName": "0.5.9",
-  "changelog": "Nowa główna ikona aplikacji Budowlanka: dom + miarka w czarno-pomarańczowym stylu. Dodano poprawną obsługę launchera Android, w tym ikonę standardową, okrągłą i adaptacyjną. Bez zmian w danych i funkcjach aplikacji.",
+  "versionCode": 15,
+  "versionName": "0.5.10",
+  "changelog": "Naprawiono skaczący kursor w Ustawieniach przez oddzielenie edycji pól od zapisu do bazy. NIP przyjmuje wyłącznie 10 cyfr i jest sprawdzany sumą kontrolną. E-mail ma klawiaturę e-mail oraz walidację formatu, telefon klawiaturę telefoniczną. Numer wersji w Ustawieniach jest teraz pobierany z faktycznego buildu.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }

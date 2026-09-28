@@ -1,10 +1,13 @@
 package pl.edwin.budowlanka.ui
 
+import android.util.Patterns
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -13,10 +16,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -875,6 +884,74 @@ fun CalendarScreen(vm: MainViewModel, onOpenEstimate: (Long) -> Unit) {
     }
 }
 
+private fun isValidPolishNip(value: String): Boolean {
+    if (value.length != 10 || value.any { !it.isDigit() }) return false
+    val digits = value.map { it.digitToInt() }
+    val weights = intArrayOf(6, 5, 7, 2, 3, 4, 5, 6, 7)
+    val checksum = weights.indices.sumOf { index -> weights[index] * digits[index] } % 11
+    return checksum != 10 && checksum == digits[9]
+}
+
+private fun sanitizePhone(value: String): String = buildString {
+    value.forEach { ch ->
+        when {
+            ch.isDigit() -> append(ch)
+            ch == '+' && isEmpty() -> append(ch)
+            ch == ' ' || ch == '-' || ch == '(' || ch == ')' -> append(ch)
+        }
+        if (length >= 24) return@buildString
+    }
+}.take(24)
+
+@Composable
+private fun SettingsEntryField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    onCommit: () -> Unit,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    capitalization: KeyboardCapitalization = KeyboardCapitalization.None,
+    imeAction: ImeAction = ImeAction.Next,
+    isError: Boolean = false,
+    supportingText: String? = null
+) {
+    val focusManager = LocalFocusManager.current
+    var wasFocused by remember { mutableStateOf(false) }
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = true,
+        isError = isError,
+        supportingText = if (supportingText != null) {
+            { Text(supportingText) }
+        } else null,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = keyboardType,
+            capitalization = capitalization,
+            imeAction = imeAction
+        ),
+        keyboardActions = KeyboardActions(
+            onNext = { focusManager.moveFocus(FocusDirection.Next) },
+            onDone = { focusManager.clearFocus() }
+        ),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = BudOrangeStrong,
+            focusedLabelColor = BudOrangeLight,
+            cursorColor = BudOrangeStrong,
+            focusedContainerColor = BudSelectedSoft,
+            unfocusedBorderColor = BudLine
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { state ->
+                if (wasFocused && !state.isFocused) onCommit()
+                wasFocused = state.isFocused
+            }
+    )
+}
+
 @Composable
 fun SettingsScreen(vm: MainViewModel) {
     val settingsValue by vm.settings.collectAsStateWithLifecycle()
@@ -885,8 +962,27 @@ fun SettingsScreen(vm: MainViewModel) {
     var addCrew by remember { mutableStateOf(false) }
     var update by remember { mutableStateOf<UpdateInfo?>(null) }
     var checked by remember { mutableStateOf(false) }
+    var nipTouched by remember { mutableStateOf(false) }
+    var emailTouched by remember { mutableStateOf(false) }
 
-    val s = settingsValue ?: AppSettingsEntity()
+    val initialSettings = settingsValue ?: AppSettingsEntity()
+    var draft by remember(settingsValue?.id) { mutableStateOf(initialSettings) }
+    var saved by remember(settingsValue?.id) { mutableStateOf(initialSettings) }
+
+    fun persist(next: AppSettingsEntity) {
+        saved = next
+        vm.saveSettings(next)
+    }
+
+    val nipValid = draft.nip.isBlank() || isValidPolishNip(draft.nip)
+    val emailNormalized = draft.email.trim()
+    val emailValid = emailNormalized.isBlank() || Patterns.EMAIL_ADDRESS.matcher(emailNormalized).matches()
+    val versionName = remember(context) {
+        runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        }.getOrNull() ?: "?"
+    }
+
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -894,19 +990,143 @@ fun SettingsScreen(vm: MainViewModel) {
         Text("Ustawienia", style = MaterialTheme.typography.headlineSmall)
 
         Section("Dane firmy — trafią na ofertę PDF") {
-            OutlinedTextField(s.companyName, { vm.saveSettings(s.copy(companyName = it)) }, label = { Text("Nazwa firmy") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(s.nip, { vm.saveSettings(s.copy(nip = it)) }, label = { Text("NIP") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(s.address, { vm.saveSettings(s.copy(address = it)) }, label = { Text("Adres") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(s.phone, { vm.saveSettings(s.copy(phone = it)) }, label = { Text("Telefon") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(s.email, { vm.saveSettings(s.copy(email = it)) }, label = { Text("E-mail") }, modifier = Modifier.fillMaxWidth())
+            SettingsEntryField(
+                label = "Nazwa firmy",
+                value = draft.companyName,
+                onValueChange = { draft = draft.copy(companyName = it) },
+                onCommit = {
+                    val clean = draft.companyName.trim()
+                    draft = draft.copy(companyName = clean)
+                    persist(saved.copy(companyName = clean))
+                },
+                capitalization = KeyboardCapitalization.Words
+            )
+
+            SettingsEntryField(
+                label = "NIP",
+                value = draft.nip,
+                onValueChange = { entered ->
+                    val digits = entered.filter { it.isDigit() }.take(10)
+                    draft = draft.copy(nip = digits)
+                },
+                onCommit = {
+                    nipTouched = true
+                    if (draft.nip.isBlank() || isValidPolishNip(draft.nip)) {
+                        persist(saved.copy(nip = draft.nip))
+                    }
+                },
+                keyboardType = KeyboardType.Number,
+                isError = nipTouched && !nipValid,
+                supportingText = when {
+                    draft.nip.isBlank() -> "10 cyfr, bez spacji i kresek"
+                    draft.nip.length < 10 -> "${draft.nip.length}/10 cyfr"
+                    !isValidPolishNip(draft.nip) -> "Nieprawidłowa suma kontrolna NIP"
+                    else -> "NIP poprawny"
+                }
+            )
+
+            SettingsEntryField(
+                label = "Adres",
+                value = draft.address,
+                onValueChange = { draft = draft.copy(address = it) },
+                onCommit = {
+                    val clean = draft.address.trim()
+                    draft = draft.copy(address = clean)
+                    persist(saved.copy(address = clean))
+                },
+                capitalization = KeyboardCapitalization.Sentences
+            )
+
+            SettingsEntryField(
+                label = "Telefon",
+                value = draft.phone,
+                onValueChange = { draft = draft.copy(phone = sanitizePhone(it)) },
+                onCommit = {
+                    val clean = draft.phone.trim()
+                    draft = draft.copy(phone = clean)
+                    persist(saved.copy(phone = clean))
+                },
+                keyboardType = KeyboardType.Phone
+            )
+
+            SettingsEntryField(
+                label = "E-mail",
+                value = draft.email,
+                onValueChange = { entered ->
+                    draft = draft.copy(
+                        email = entered.filterNot { it.isWhitespace() }.take(254)
+                    )
+                },
+                onCommit = {
+                    emailTouched = true
+                    val clean = draft.email.trim()
+                    draft = draft.copy(email = clean)
+                    if (clean.isBlank() || Patterns.EMAIL_ADDRESS.matcher(clean).matches()) {
+                        persist(saved.copy(email = clean))
+                    }
+                },
+                keyboardType = KeyboardType.Email,
+                imeAction = ImeAction.Done,
+                isError = emailTouched && !emailValid,
+                supportingText = when {
+                    draft.email.isBlank() -> "np. biuro@firma.pl"
+                    !emailValid -> "Format: nazwa@domena.pl"
+                    else -> "Format e-mail poprawny"
+                }
+            )
         }
 
         Section("Cel i domyślne koszty") {
-            NumberField("Docelowy dochód miesięczny", s.monthlyTarget, { vm.saveSettings(s.copy(monthlyTarget = it)) }, Modifier.fillMaxWidth())
-            IntField("Dni robocze w miesiącu", s.workDaysMonth, { vm.saveSettings(s.copy(workDaysMonth = it.coerceAtLeast(1))) }, Modifier.fillMaxWidth())
-            NumberField("Godziny pracy / dzień", s.hoursPerDay, { vm.saveSettings(s.copy(hoursPerDay = it.coerceAtLeast(1.0))) }, Modifier.fillMaxWidth())
-            NumberField("Stawka za km", s.defaultKmRate, { vm.saveSettings(s.copy(defaultKmRate = it)) }, Modifier.fillMaxWidth())
-            NumberField("Domyślna stała opłata dojazdu", s.defaultFixedTravelFee, { vm.saveSettings(s.copy(defaultFixedTravelFee = it)) }, Modifier.fillMaxWidth())
+            NumberField(
+                "Docelowy dochód miesięczny",
+                draft.monthlyTarget,
+                { value ->
+                    val nextValue = value.coerceAtLeast(0.0)
+                    draft = draft.copy(monthlyTarget = nextValue)
+                    persist(saved.copy(monthlyTarget = nextValue))
+                },
+                Modifier.fillMaxWidth()
+            )
+            IntField(
+                "Dni robocze w miesiącu",
+                draft.workDaysMonth,
+                { value ->
+                    val nextValue = value.coerceAtLeast(1)
+                    draft = draft.copy(workDaysMonth = nextValue)
+                    persist(saved.copy(workDaysMonth = nextValue))
+                },
+                Modifier.fillMaxWidth()
+            )
+            NumberField(
+                "Godziny pracy / dzień",
+                draft.hoursPerDay,
+                { value ->
+                    val nextValue = value.coerceAtLeast(1.0)
+                    draft = draft.copy(hoursPerDay = nextValue)
+                    persist(saved.copy(hoursPerDay = nextValue))
+                },
+                Modifier.fillMaxWidth()
+            )
+            NumberField(
+                "Stawka za km",
+                draft.defaultKmRate,
+                { value ->
+                    val nextValue = value.coerceAtLeast(0.0)
+                    draft = draft.copy(defaultKmRate = nextValue)
+                    persist(saved.copy(defaultKmRate = nextValue))
+                },
+                Modifier.fillMaxWidth()
+            )
+            NumberField(
+                "Domyślna stała opłata dojazdu",
+                draft.defaultFixedTravelFee,
+                { value ->
+                    val nextValue = value.coerceAtLeast(0.0)
+                    draft = draft.copy(defaultFixedTravelFee = nextValue)
+                    persist(saved.copy(defaultFixedTravelFee = nextValue))
+                },
+                Modifier.fillMaxWidth()
+            )
         }
 
         Section("Ekipa — maks. 6 osób na zleceniu") {
@@ -957,7 +1177,7 @@ fun SettingsScreen(vm: MainViewModel) {
         }
 
         Section("Aktualizacje — jeden kanał") {
-            Text("Wersja: 0.5.8")
+            Text("Wersja: $versionName")
             Button(onClick = {
                 scope.launch {
                     update = UpdateChecker.check(context)

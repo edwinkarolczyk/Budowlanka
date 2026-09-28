@@ -161,11 +161,19 @@ fun IntField(
     onValue: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var text by remember(value) { mutableStateOf(if (value == 0) "" else value.toString()) }
+    var text by remember { mutableStateOf(if (value == 0) "" else value.toString()) }
+    var focused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(value, focused) {
+        if (!focused) {
+            text = if (value == 0) "" else value.toString()
+        }
+    }
+
     OutlinedTextField(
         value = text,
-        onValueChange = {
-            text = it.filter { c -> c.isDigit() }
+        onValueChange = { entered ->
+            text = entered.filter { c -> c.isDigit() }
             onValue(text.toIntOrNull() ?: 0)
         },
         label = { Text(label) },
@@ -178,6 +186,11 @@ fun IntField(
             focusedContainerColor = BudSelectedSoft,
             unfocusedBorderColor = BudLine
         ),
-        modifier = modifier
+        modifier = modifier.onFocusChanged { state ->
+            focused = state.isFocused
+            if (!state.isFocused) {
+                text = (text.toIntOrNull() ?: value).toString().let { if (it == "0") "" else it }
+            }
+        }
     )
 }
