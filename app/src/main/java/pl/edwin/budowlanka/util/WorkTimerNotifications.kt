@@ -17,6 +17,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import pl.edwin.budowlanka.MainActivity
 import pl.edwin.budowlanka.R
+import pl.edwin.budowlanka.data.AppDao
 import pl.edwin.budowlanka.data.AppDatabase
 import pl.edwin.budowlanka.data.WorkEndReason
 import pl.edwin.budowlanka.data.WorkSessionEventEntity
@@ -106,6 +107,27 @@ object WorkTimerNotifications {
         context.getSystemService(NotificationManager::class.java)
             .cancel(notificationId(estimateId))
     }
+
+    suspend fun restoreActive(context: Context, dao: AppDao) {
+        dao.allActiveWorkSessions()
+            .groupBy { it.estimateId }
+            .forEach { (estimateId, sessions) ->
+                val estimate = dao.getEstimate(estimateId) ?: run {
+                    // Rekord osierocony nie może zostawić wiszącego powiadomienia.
+                    cancel(context, estimateId)
+                    return@forEach
+                }
+
+                show(
+                    context = context,
+                    estimateId = estimateId,
+                    estimateTitle = estimate.title,
+                    startAt = sessions.minOf { it.startAt },
+                    crewCount = sessions.size,
+                    workType = sessions.first().type
+                )
+            }
+    }
 }
 
 class WorkTimerActionReceiver : BroadcastReceiver() {
@@ -160,19 +182,7 @@ class WorkTimerBootReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 val dao = AppDatabase.get(context.applicationContext).dao()
-                dao.allActiveWorkSessions()
-                    .groupBy { it.estimateId }
-                    .forEach { (estimateId, sessions) ->
-                        val estimate = dao.getEstimate(estimateId) ?: return@forEach
-                        WorkTimerNotifications.show(
-                            context = context,
-                            estimateId = estimateId,
-                            estimateTitle = estimate.title,
-                            startAt = sessions.minOf { it.startAt },
-                            crewCount = sessions.size,
-                            workType = sessions.first().type
-                        )
-                    }
+                WorkTimerNotifications.restoreActive(context.applicationContext, dao)
             } finally {
                 pending.finish()
             }
