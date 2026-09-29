@@ -1,6 +1,6 @@
 {
-  "versionCode": 24,
-  "versionName": "0.5.19",
-  "changelog": "Uproszczono kreator kosztorysu: stały dolny pasek pokazuje liczbę pozycji, bieżącą sumę, rozwijane rozbicie kosztów oraz prowadzi Wstecz/Dalej między krokami. Na kartach robót checkbox zastąpiono jednoznacznym znacznikiem „✓ Dodano”; checkboxy pojawiają się tylko po wejściu w jawny tryb usuwania wielu pozycji. Bez zmian bazy i danych.",
+  "versionCode": 25,
+  "versionName": "0.5.20",
+  "changelog": "Stabilizacja czasu pracy na Androidzie 13+: START czeka na wynik systemowej prośby o POST_NOTIFICATIONS. Po zgodzie licznik uruchamia się z powiadomieniem i akcjami PAUZA/STOP; po odmowie licznik nadal działa, ale aplikacja wyświetla jasny komunikat o braku sterowania z powiadomienia. Bez zmian bazy i danych.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }

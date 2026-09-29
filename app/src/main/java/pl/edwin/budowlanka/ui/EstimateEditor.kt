@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -595,9 +596,23 @@ private fun ValuationStep(
     val activeTimerSessions = timerSessions.filter { it.endAt == null }
     var timerNow by remember { mutableStateOf(System.currentTimeMillis()) }
     val context = LocalContext.current
+    var pendingWorkStart by remember { mutableStateOf<Pair<String, List<Long>>?>(null) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { }
+    ) { granted ->
+        val pending = pendingWorkStart
+        pendingWorkStart = null
+        if (pending != null) {
+            if (!granted) {
+                Toast.makeText(
+                    context,
+                    "Licznik działa, ale bez powiadomienia PAUZA/STOP. Możesz włączyć powiadomienia w ustawieniach aplikacji.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            vm.startWork(e.id, pending.first, pending.second)
+        }
+    }
 
     LaunchedEffect(activeTimerSessions.map { it.id }) {
         while (activeTimerSessions.isNotEmpty()) {
@@ -606,11 +621,21 @@ private fun ValuationStep(
         }
     }
 
-    fun requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
+    fun startWorkWithNotificationPermission(
+        type: String = WorkTimeType.WORK,
+        crewIds: List<Long> = emptyList()
+    ) {
+        val needsPermission = Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+
+        if (needsPermission) {
+            pendingWorkStart = type to crewIds
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            vm.startWork(e.id, type, crewIds)
         }
     }
 
@@ -666,8 +691,7 @@ private fun ValuationStep(
                     active = false,
                     enabled = canRunTimer,
                     onTap = {
-                        requestNotificationPermissionIfNeeded()
-                        vm.startWork(e.id)
+                        startWorkWithNotificationPermission()
                     },
                     onLongPress = {
                         if (canRunTimer) showStartOptions = true
@@ -749,8 +773,7 @@ private fun ValuationStep(
             crew = crew,
             onDismiss = { showStartOptions = false },
             onStart = { type, crewIds ->
-                requestNotificationPermissionIfNeeded()
-                vm.startWork(e.id, type, crewIds)
+                startWorkWithNotificationPermission(type, crewIds)
                 showStartOptions = false
             }
         )
