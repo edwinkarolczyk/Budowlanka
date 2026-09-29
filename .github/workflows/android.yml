@@ -34,6 +34,9 @@ jobs:
           mkdir -p ci
           base64 -d ci/dev-keystore.p12.b64 > ci/dev-keystore.p12
 
+      - name: Regression tests
+        run: gradle :app:testDebugUnitTest --stacktrace
+
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
 
