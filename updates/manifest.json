@@ -1,6 +1,6 @@
 {
-  "versionCode": 25,
-  "versionName": "0.5.20",
-  "changelog": "Stabilizacja czasu pracy na Androidzie 13+: START czeka na wynik systemowej prośby o POST_NOTIFICATIONS. Po zgodzie licznik uruchamia się z powiadomieniem i akcjami PAUZA/STOP; po odmowie licznik nadal działa, ale aplikacja wyświetla jasny komunikat o braku sterowania z powiadomienia. Bez zmian bazy i danych.",
+  "versionCode": 26,
+  "versionName": "0.5.21",
+  "changelog": "Stabilizacja Planu: przy proponowaniu nowego terminu harmonogram blokują wyłącznie zlecenia zaakceptowane i będące w realizacji. Szkice, wysłane oferty, zakończone i odrzucone wyceny nie rezerwują już przyszłych terminów. Bez zmian bazy i zapisanych dat.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }

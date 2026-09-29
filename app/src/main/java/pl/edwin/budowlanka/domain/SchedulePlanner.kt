@@ -32,9 +32,13 @@ object SchedulePlanner {
         from: LocalDate = LocalDate.now()
     ): Pair<String, String> {
         val duration = ceil(technicalDays.coerceAtLeast(1.0)).toInt()
+        val blockingStatuses = setOf(
+            EstimateStatus.ACCEPTED,
+            EstimateStatus.IN_PROGRESS
+        )
         val occupied = all.filter {
             it.id != estimateId &&
-                it.status != EstimateStatus.REJECTED &&
+                it.status in blockingStatuses &&
                 it.startDate.isNotBlank()
         }.mapNotNull {
             runCatching {
