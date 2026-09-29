@@ -227,7 +227,8 @@ class DatabaseRegressionTest {
     }
 
     @Test
-    fun dataSurvivesDatabaseCloseAndReopen() = runBlocking {
+    fun dataSurvivesDatabaseCloseAndReopen() {
+        runBlocking {
         val name = "reopen_${System.nanoTime()}.db"
         context.deleteDatabase(name)
 
@@ -266,7 +267,8 @@ class DatabaseRegressionTest {
         assertEquals("Nie zgubić", estimate?.notes)
         assertEquals(siteId, estimate?.siteId)
 
-        fileDb.close()
-        context.deleteDatabase(name)
+            fileDb.close()
+            context.deleteDatabase(name)
+        }
     }
 }
