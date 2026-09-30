@@ -1,6 +1,6 @@
 {
-  "versionCode": 27,
-  "versionName": "0.5.22",
-  "changelog": "Stabilizacja testowa: CI uruchamia teraz automatyczny pakiet regresji przed zbudowaniem i publikacją APK. Testy obejmują kosztorys bez zakresu, obmiar ścian z otworami, wycenę robocizny, ciągłość migracji Room 1→8, rzeczywistą migrację 7→8 z zachowaniem danych, bezpieczne usuwanie pomieszczenia, START→STOP→START, podwójny START/STOP oraz zachowanie danych po zamknięciu i ponownym otwarciu bazy. Nie zmienia to danych użytkownika ani schematu bazy.",
+  "versionCode": 28,
+  "versionName": "0.5.23",
+  "changelog": "Stabilizacja formularzy i kursora: pola liczbowe używają teraz TextFieldValue i zachowują pozycję kursora podczas filtrowania cyfr, separatora dziesiętnego i odświeżeń danych. Pola ustawień (w tym NIP i e-mail) mają lokalny bufor edycji, więc zapis/odczyt z Room nie odsyła kursora na koniec ani nie powoduje skakania podczas pisania. Dodano testy regresyjne położenia kursora. Bez migracji bazy.",
   "apkUrl": "https://github.com/edwinkarolczyk/Budowlanka/releases/download/development-latest/Budowlanka.apk"
 }
