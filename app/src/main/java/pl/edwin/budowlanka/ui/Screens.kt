@@ -22,10 +22,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -900,11 +902,35 @@ private fun SettingsEntryField(
     supportingText: String? = null
 ) {
     val focusManager = LocalFocusManager.current
-    var wasFocused by remember { mutableStateOf(false) }
+    var focused by remember { mutableStateOf(false) }
+    var fieldValue by remember {
+        mutableStateOf(TextFieldValue(value, selection = TextRange(value.length)))
+    }
+
+    LaunchedEffect(value, focused) {
+        when {
+            !focused && fieldValue.text != value -> {
+                fieldValue = TextFieldValue(value, selection = TextRange(value.length))
+            }
+            focused && fieldValue.text != value -> {
+                // Walidator (np. NIP/e-mail) mógł odfiltrować znak.
+                // Zachowaj pozycję kursora zamiast odsyłać go na koniec pola.
+                val start = fieldValue.selection.start.coerceAtMost(value.length)
+                val end = fieldValue.selection.end.coerceAtMost(value.length)
+                fieldValue = TextFieldValue(
+                    text = value,
+                    selection = TextRange(start, end)
+                )
+            }
+        }
+    }
 
     OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
+        value = fieldValue,
+        onValueChange = { entered ->
+            fieldValue = entered
+            onValueChange(entered.text)
+        },
         label = { Text(label) },
         singleLine = true,
         isError = isError,
@@ -930,8 +956,8 @@ private fun SettingsEntryField(
         modifier = Modifier
             .fillMaxWidth()
             .onFocusChanged { state ->
-                if (wasFocused && !state.isFocused) onCommit()
-                wasFocused = state.isFocused
+                if (focused && !state.isFocused) onCommit()
+                focused = state.isFocused
             }
     )
 }

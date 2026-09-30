@@ -11,7 +11,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import java.text.NumberFormat
@@ -102,6 +104,65 @@ private fun displayNumber(value: Double): String {
     return raw.replace('.', ',')
 }
 
+private fun remapSelectionAfterFilter(
+    source: TextFieldValue,
+    keptIndexes: List<Int>,
+    outputLength: Int
+): TextRange {
+    fun mapped(position: Int): Int =
+        keptIndexes.count { it < position }.coerceIn(0, outputLength)
+
+    return TextRange(
+        start = mapped(source.selection.start),
+        end = mapped(source.selection.end)
+    )
+}
+
+internal fun sanitizeDecimalFieldValue(input: TextFieldValue): TextFieldValue {
+    val output = StringBuilder()
+    val keptIndexes = mutableListOf<Int>()
+    var separatorSeen = false
+
+    input.text.forEachIndexed { index, ch ->
+        val keep = when {
+            ch.isDigit() -> true
+            (ch == ',' || ch == '.') && !separatorSeen -> {
+                separatorSeen = true
+                true
+            }
+            else -> false
+        }
+        if (keep) {
+            keptIndexes += index
+            output.append(ch)
+        }
+    }
+
+    val text = output.toString()
+    return TextFieldValue(
+        text = text,
+        selection = remapSelectionAfterFilter(input, keptIndexes, text.length)
+    )
+}
+
+internal fun sanitizeIntegerFieldValue(input: TextFieldValue): TextFieldValue {
+    val output = StringBuilder()
+    val keptIndexes = mutableListOf<Int>()
+
+    input.text.forEachIndexed { index, ch ->
+        if (ch.isDigit()) {
+            keptIndexes += index
+            output.append(ch)
+        }
+    }
+
+    val text = output.toString()
+    return TextFieldValue(
+        text = text,
+        selection = remapSelectionAfterFilter(input, keptIndexes, text.length)
+    )
+}
+
 @Composable
 fun NumberField(
     label: String,
@@ -109,31 +170,32 @@ fun NumberField(
     onValue: (Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var text by remember { mutableStateOf(displayNumber(value)) }
+    var fieldValue by remember {
+        val initial = displayNumber(value)
+        mutableStateOf(TextFieldValue(initial, selection = TextRange(initial.length)))
+    }
     var focused by remember { mutableStateOf(false) }
 
     LaunchedEffect(value, focused) {
-        if (!focused) text = displayNumber(value)
+        if (!focused) {
+            val displayed = displayNumber(value)
+            if (fieldValue.text != displayed) {
+                fieldValue = TextFieldValue(displayed, selection = TextRange(displayed.length))
+            }
+        }
     }
 
     OutlinedTextField(
-        value = text,
+        value = fieldValue,
         onValueChange = { entered ->
-            val filtered = buildString {
-                var separatorSeen = false
-                entered.forEach { ch ->
-                    when {
-                        ch.isDigit() -> append(ch)
-                        (ch == ',' || ch == '.') && !separatorSeen -> {
-                            append(ch)
-                            separatorSeen = true
-                        }
-                    }
-                }
+            val sanitized = sanitizeDecimalFieldValue(entered)
+            fieldValue = sanitized
+
+            if (sanitized.text.isBlank()) {
+                onValue(0.0)
+            } else {
+                sanitized.text.replace(',', '.').toDoubleOrNull()?.let(onValue)
             }
-            text = filtered
-            if (filtered.isBlank()) onValue(0.0)
-            else filtered.replace(',', '.').toDoubleOrNull()?.let(onValue)
         },
         label = { Text(label) },
         singleLine = true,
@@ -148,7 +210,13 @@ fun NumberField(
         modifier = modifier.onFocusChanged { state ->
             focused = state.isFocused
             if (!state.isFocused) {
-                text = displayNumber(text.replace(',', '.').toDoubleOrNull() ?: value)
+                val normalized = displayNumber(
+                    fieldValue.text.replace(',', '.').toDoubleOrNull() ?: value
+                )
+                fieldValue = TextFieldValue(
+                    normalized,
+                    selection = TextRange(normalized.length)
+                )
             }
         }
     )
@@ -161,20 +229,27 @@ fun IntField(
     onValue: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var text by remember { mutableStateOf(if (value == 0) "" else value.toString()) }
+    var fieldValue by remember {
+        val initial = if (value == 0) "" else value.toString()
+        mutableStateOf(TextFieldValue(initial, selection = TextRange(initial.length)))
+    }
     var focused by remember { mutableStateOf(false) }
 
     LaunchedEffect(value, focused) {
         if (!focused) {
-            text = if (value == 0) "" else value.toString()
+            val displayed = if (value == 0) "" else value.toString()
+            if (fieldValue.text != displayed) {
+                fieldValue = TextFieldValue(displayed, selection = TextRange(displayed.length))
+            }
         }
     }
 
     OutlinedTextField(
-        value = text,
+        value = fieldValue,
         onValueChange = { entered ->
-            text = entered.filter { c -> c.isDigit() }
-            onValue(text.toIntOrNull() ?: 0)
+            val sanitized = sanitizeIntegerFieldValue(entered)
+            fieldValue = sanitized
+            onValue(sanitized.text.toIntOrNull() ?: 0)
         },
         label = { Text(label) },
         singleLine = true,
@@ -189,7 +264,13 @@ fun IntField(
         modifier = modifier.onFocusChanged { state ->
             focused = state.isFocused
             if (!state.isFocused) {
-                text = (text.toIntOrNull() ?: value).toString().let { if (it == "0") "" else it }
+                val normalized = (fieldValue.text.toIntOrNull() ?: value)
+                    .toString()
+                    .let { if (it == "0") "" else it }
+                fieldValue = TextFieldValue(
+                    normalized,
+                    selection = TextRange(normalized.length)
+                )
             }
         }
     )
