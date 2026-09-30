@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BUDOWLANKA PC</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#0b0f12;--panel:#151a1e;--panel2:#1b2024;--line:#5e676f;
+  --text:#f4f5f6;--muted:#b8bec4;--accent:#ffb000;--accent2:#ffc247;
+  --green:#42c765;--red:#ff5c5c;--blue:#58a6ff
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif}
+button,input,select{font:inherit}
+button{cursor:pointer}
+header{position:sticky;top:0;z-index:10;background:#090c0e;border-bottom:1px solid #282e33}
+.top{max-width:1600px;margin:auto;padding:14px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:900;font-size:21px;letter-spacing:.3px}
+.readonly{color:var(--muted);font-size:12px}
+.connection{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--red);display:inline-block}
+.dot.ok{background:var(--green)}
+main{max-width:1600px;margin:auto;padding:16px}
+.toolbar,.card,.panel{background:var(--panel);border:1px solid #252b30;border-radius:14px}
+.toolbar{padding:12px;display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+label{font-size:12px;color:var(--muted)}
+input,select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 11px;min-height:42px}
+input:focus,select:focus,button:focus{outline:2px solid var(--accent);outline-offset:1px}
+.primary,.secondary,.ghost,.tab{border:0;border-radius:10px;padding:10px 14px;font-weight:800;min-height:42px}
+.primary{background:var(--accent);color:#000}
+.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+.ghost{background:transparent;color:var(--text);border:1px solid #343b41}
+.statusText{margin-left:auto;font-weight:800}
+.okText{color:var(--green)}.badText{color:var(--red)}.muted{color:var(--muted)}
+.tabs{display:flex;gap:8px;margin:14px 0;overflow-x:auto;padding-bottom:3px}
+.tab{white-space:nowrap;background:var(--panel2);color:var(--muted);border:1px solid #30363b}
+.tab.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.view{display:none}.view.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin:14px 0}
+.card{padding:14px}.metric{font-size:26px;font-weight:900;color:var(--accent2);margin-top:5px}
+.metricSub{font-size:12px;color:var(--muted);margin-top:3px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.panel{padding:14px;margin-top:14px;min-width:0}
+.panel h2{font-size:18px;margin:0 0 12px}
+.panel h3{font-size:15px;margin:14px 0 8px}
+.tableWrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:760px}
+th,td{text-align:left;padding:10px;border-bottom:1px solid #30373d;vertical-align:top}
+th{color:var(--muted);font-size:12px;position:sticky;top:0;background:var(--panel)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.selectable{cursor:pointer}
+tr.selectable:hover{background:#1b2024}
+.badDelta{color:var(--red)}.goodDelta{color:var(--green)}
+.pill{display:inline-block;border-radius:999px;padding:4px 8px;background:var(--panel2);font-size:12px;border:1px solid #30363b}
+.pill.green{color:var(--green);border-color:#275d38}.pill.red{color:var(--red);border-color:#663434}
+.split{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr);gap:14px}
+.list{display:flex;flex-direction:column;gap:8px}
+.listItem{background:var(--panel2);border:1px solid #30363b;border-radius:11px;padding:11px;cursor:pointer}
+.listItem.active{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.listItem strong{display:block;margin-bottom:4px}
+.kv{display:grid;grid-template-columns:180px 1fr;gap:7px 12px}
+.kv div:nth-child(odd){color:var(--muted)}
+.sectionGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.mini{background:var(--panel2);border:1px solid #30363b;border-radius:11px;padding:10px}
+.alert{border-left:4px solid var(--red);padding:10px 12px;background:#29191a;border-radius:9px;margin:8px 0}
+.info{border-left:4px solid var(--blue);padding:10px 12px;background:#142033;border-radius:9px;margin:8px 0}
+.empty{color:var(--muted);padding:16px 4px}
+.progress{height:9px;background:#252b30;border-radius:999px;overflow:hidden}
+.progress>span{display:block;height:100%;background:var(--accent)}
+.calendarRow{display:grid;grid-template-columns:120px 120px 1fr 130px 130px;gap:8px;padding:9px 0;border-bottom:1px solid #30373d;align-items:center}
+.searchRow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.searchRow input{min-width:260px;flex:1}
+.footer{padding:16px 2px;color:var(--muted);font-size:12px}
+details{background:var(--panel2);border:1px solid #30363b;border-radius:10px;padding:8px 10px}
+summary{cursor:pointer;font-weight:800}
+@media(max-width:980px){.grid2,.grid3,.split{grid-template-columns:1fr}.connection{margin-left:0}.calendarRow{grid-template-columns:1fr 1fr}.calendarRow>*:nth-child(n+3){grid-column:1/-1}}
+@media(max-width:600px){main{padding:10px}.top{padding:10px}.toolbar{align-items:stretch}.toolbar>*{width:100%}.statusText{margin-left:0}.kv{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div>
+      <div class="brand">BUDOWLANKA — PC</div>
+      <div class="readonly">Pełny panel roboczy • Telefon → PC • tylko odczyt</div>
+    </div>
+    <div class="connection">
+      <span id="connDot" class="dot"></span>
+      <strong id="connLabel">Nie połączono</strong>
+      <span id="lastSync" class="muted"></span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <label>Kod z telefonu
+      <input id="code" inputmode="numeric" maxlength="6" placeholder="000000">
+    </label>
+    <button id="refresh" class="primary" type="button">Pobierz dane</button>
+    <button id="saveJson" class="secondary" type="button" disabled>Zapisz JSON</button>
+    <button id="saveCsv" class="secondary" type="button" disabled>Eksport zleceń CSV</button>
+    <span id="status" class="statusText muted">Czekam na połączenie</span>
+  </div>
+
+  <nav class="tabs" aria-label="Moduły panelu PC">
+    <button class="tab active" data-view="dashboard">Pulpit</button>
+    <button class="tab" data-view="jobs">Zlecenia</button>
+    <button class="tab" data-view="clients">Klienci</button>
+    <button class="tab" data-view="time">Czas pracy</button>
+    <button class="tab" data-view="calendar">Kalendarz</button>
+    <button class="tab" data-view="catalog">Katalog</button>
+    <button class="tab" data-view="sync">Synchronizacja</button>
+  </nav>
+
+  <section id="view-dashboard" class="view active">
+    <div class="cards">
+      <div class="card"><div class="muted">Klienci</div><div id="mClients" class="metric">—</div></div>
+      <div class="card"><div class="muted">Zlecenia</div><div id="mJobs" class="metric">—</div></div>
+      <div class="card"><div class="muted">W realizacji</div><div id="mActive" class="metric">—</div></div>
+      <div class="card"><div class="muted">Wartość wycen</div><div id="mQuoted" class="metric">—</div></div>
+      <div class="card"><div class="muted">Plan r-g</div><div id="mPlanned" class="metric">—</div></div>
+      <div class="card"><div class="muted">Wykonanie r-g</div><div id="mActual" class="metric">—</div></div>
+      <div class="card"><div class="muted">Dojazdy</div><div id="mTravel" class="metric">—</div></div>
+      <div class="card"><div class="muted">Sesje czasu</div><div id="mSessions" class="metric">—</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h2>Aktywne zlecenia</h2>
+        <div id="dashActive" class="empty">Pobierz dane z telefonu.</div>
+      </div>
+      <div class="panel">
+        <h2>Alerty</h2>
+        <div id="dashAlerts" class="empty">Pobierz dane z telefonu.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Plan kontra wykonanie</h2>
+      <div class="tableWrap">
+        <table>
+          <thead><tr><th>Zlecenie</th><th>Status</th><th class="num">Wycena</th><th class="num">Plan r-g</th><th class="num">Wykonanie</th><th class="num">Różnica</th><th class="num">Dojazd</th></tr></thead>
+          <tbody id="dashJobs"><tr><td colspan="7" class="muted">Brak danych.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-jobs" class="view">
+    <div class="split">
+      <div class="panel">
+        <h2>Zlecenia / kosztorysy</h2>
+        <div class="searchRow">
+          <input id="jobSearch" placeholder="Szukaj po nazwie, kliencie, adresie">
+          <select id="jobStatus"><option value="">Wszystkie statusy</option></select>
+        </div>
+        <div id="jobList" class="list"><div class="empty">Brak danych.</div></div>
+      </div>
+      <div class="panel">
+        <h2>Szczegóły zlecenia</h2>
+        <div id="jobDetail" class="empty">Wybierz zlecenie z listy.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-clients" class="view">
+    <div class="split">
+      <div class="panel">
+        <h2>Klienci</h2>
+        <div class="searchRow"><input id="clientSearch" placeholder="Szukaj klienta, telefonu, e-maila, adresu"></div>
+        <div id="clientList" class="list"><div class="empty">Brak danych.</div></div>
+      </div>
+      <div class="panel">
+        <h2>Karta klienta</h2>
+        <div id="clientDetail" class="empty">Wybierz klienta z listy.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-time" class="view">
+    <div class="cards">
+      <div class="card"><div class="muted">Praca</div><div id="tWork" class="metric">—</div></div>
+      <div class="card"><div class="muted">Dojazd</div><div id="tTravel" class="metric">—</div></div>
+      <div class="card"><div class="muted">Przerwy</div><div id="tBreak" class="metric">—</div></div>
+      <div class="card"><div class="muted">Zaopatrzenie</div><div id="tSupply" class="metric">—</div></div>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <h2>Ekipa</h2>
+        <div class="tableWrap"><table><thead><tr><th>Osoba</th><th class="num">Praca</th><th class="num">Dojazd</th><th class="num">Przerwy</th><th class="num">Zaopatrzenie</th></tr></thead><tbody id="timeCrew"></tbody></table></div>
+      </div>
+      <div class="panel">
+        <h2>Aktywne liczniki</h2>
+        <div id="activeTimers" class="empty">Brak aktywnych liczników.</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Historia sesji</h2>
+      <div class="searchRow">
+        <input id="timeSearch" placeholder="Szukaj po zleceniu lub pracowniku">
+        <select id="timeType">
+          <option value="">Wszystkie typy</option>
+          <option value="PRACA">Praca</option>
+          <option value="DOJAZD">Dojazd</option>
+          <option value="PRZERWA">Przerwa</option>
+          <option value="ZAOPATRZENIE">Zaopatrzenie</option>
+        </select>
+      </div>
+      <div class="tableWrap"><table><thead><tr><th>Start</th><th>Koniec</th><th>Zlecenie</th><th>Osoba</th><th>Typ</th><th class="num">Czas</th><th>Powód</th></tr></thead><tbody id="sessionRows"></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="view-calendar" class="view">
+    <div class="panel">
+      <h2>Kalendarz realizacji</h2>
+      <div id="calendarAlerts"></div>
+      <div id="calendarRows" class="empty">Brak zleceń z terminem.</div>
+    </div>
+  </section>
+
+  <section id="view-catalog" class="view">
+    <div class="grid3">
+      <div class="panel">
+        <h2>Roboty</h2>
+        <div class="searchRow"><input id="workSearch" placeholder="Szukaj roboty"></div>
+        <div id="workList" class="list"></div>
+      </div>
+      <div class="panel">
+        <h2>Materiały</h2>
+        <div class="searchRow"><input id="materialSearch" placeholder="Szukaj materiału"></div>
+        <div id="materialList" class="list"></div>
+      </div>
+      <div class="panel">
+        <h2>Narzędzia</h2>
+        <div class="searchRow"><input id="toolSearch" placeholder="Szukaj narzędzia"></div>
+        <div id="toolList" class="list"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-sync" class="view">
+    <div class="grid2">
+      <div class="panel">
+        <h2>Stan synchronizacji</h2>
+        <div id="syncState" class="empty">Brak połączenia.</div>
+      </div>
+      <div class="panel">
+        <h2>Zawartość snapshotu</h2>
+        <div id="syncCounts" class="empty">Brak danych.</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Eksport</h2>
+      <p class="muted">JSON zawiera pełny snapshot danych. CSV eksportuje tabelę zleceń do Excela. Panel PC nie posiada żadnej operacji zapisu do telefonu.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="saveJson2" class="secondary" type="button" disabled>Zapisz pełny JSON</button>
+        <button id="saveCsv2" class="secondary" type="button" disabled>Zapisz zlecenia CSV</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="stamp" class="footer">Dane płyną wyłącznie Telefon → PC. Panel nie zapisuje zmian w telefonie.</div>
+</main>
+
+<script>
+const byId=id=>document.getElementById(id);
+const code=byId('code'), statusEl=byId('status');
+let snapshot=null, selectedJobId=null, selectedClientId=null;
+
+const money=v=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(Number(v||0));
+const num=v=>new Intl.NumberFormat('pl-PL',{maximumFractionDigits:1}).format(Number(v||0));
+const num2=v=>new Intl.NumberFormat('pl-PL',{maximumFractionDigits:2}).format(Number(v||0));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const arr=(o,k)=>Array.isArray(o?.[k])?o[k]:[];
+const msHours=ms=>Number(ms||0)/3600000;
+const duration=(s,now=Date.now())=>Math.max(0,(s.endAt??now)-s.startAt);
+const dateTime=v=>v?new Date(v).toLocaleString('pl-PL'):'—';
+const textDate=v=>v||'—';
+const statusPill=s=>'<span class="pill">'+esc(s||'—')+'</span>';
+const data=()=>snapshot||{};
+const stats=()=>data().statistics||{};
+
+function setConn(text,ok){
+  statusEl.textContent=text;
+  statusEl.className='statusText '+(ok?'okText':'badText');
+  byId('connDot').className='dot'+(ok?' ok':'');
+  byId('connLabel').textContent=ok?'Połączono':'Nie połączono';
+}
+function switchView(name){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+name));
+  if(name==='jobs') renderJobs();
+  if(name==='clients') renderClients();
+  if(name==='time') renderTime();
+  if(name==='calendar') renderCalendar();
+  if(name==='catalog') renderCatalog();
+  if(name==='sync') renderSync();
+}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
+
+async function load(){
+  const c=code.value.trim();
+  if(!c){setConn('Wpisz kod dostępu',false);return}
+  localStorage.setItem('budowlanka_pc_code',c);
+  setConn('Pobieranie danych…',true);
+  try{
+    const r=await fetch('/snapshot?code='+encodeURIComponent(c),{cache:'no-store'});
+    if(!r.ok) throw new Error(r.status===403?'Nieprawidłowy kod':'Błąd HTTP '+r.status);
+    snapshot=await r.json();
+    renderAll();
+    ['saveJson','saveCsv','saveJson2','saveCsv2'].forEach(id=>byId(id).disabled=false);
+    setConn('Połączono • tylko odczyt',true);
+  }catch(e){
+    setConn(e.message||'Błąd połączenia',false);
+  }
+}
+
+function indexes(){
+  const s=data();
+  return {
+    clients:new Map(arr(s,'clients').map(x=>[x.id,x])),
+    sites:new Map(arr(s,'sites').map(x=>[x.id,x])),
+    estimates:new Map(arr(s,'estimates').map(x=>[x.id,x])),
+    works:new Map(arr(s,'works').map(x=>[x.id,x])),
+    materials:new Map(arr(s,'materials').map(x=>[x.id,x])),
+    tools:new Map(arr(s,'tools').map(x=>[x.id,x])),
+    crew:new Map(arr(s,'crewMembers').map(x=>[x.id,x])),
+    spaces:new Map(arr(s,'spaces').map(x=>[x.id,x])),
+    jobStats:new Map(arr(stats(),'byEstimate').map(x=>[x.estimateId,x]))
+  };
+}
+function workQty(line,spaces){
+  if(line.quantitySource==='MANUAL'||line.quantitySource==='SZTUKI') return Number(line.quantity||0);
+  const chosen=line.spaceId==null?spaces:spaces.filter(x=>x.id===line.spaceId);
+  return chosen.reduce((sum,s)=>{
+    const l=Number(s.length||0),w=Number(s.width||0),h=Number(s.height||0),open=Number(s.openingsArea||0);
+    if(line.quantitySource==='PODLOGA'||line.quantitySource==='SUFIT') return sum+l*w;
+    if(line.quantitySource==='SCIANY') return sum+Math.max(0,2*(l+w)*h-open);
+    if(line.quantitySource==='OBWOD') return sum+2*(l+w);
+    if(line.quantitySource==='OTWORY') return sum+open;
+    return sum;
+  },0);
+}
+function laborRate(line,work){
+  if(!work) return 0;
+  if(line.laborPriceMode==='MIN') return Number(work.laborRateLow||work.laborRate||0);
+  if(line.laborPriceMode==='MAX') return Number(work.laborRateHigh||work.laborRate||0);
+  if(line.laborPriceMode==='WLASNA') return Number(line.laborRateOverride??work.laborRate??0);
+  return Number(work.laborRate||0);
+}
+function getJobTitle(id){return indexes().estimates.get(id)?.title||('Zlecenie #'+id)}
+function getCrewName(id){return id==null?'Nieprzypisany':(indexes().crew.get(id)?.name||('Osoba #'+id))}
+function clientForJob(e,idx){return e?.clientId?idx.clients.get(e.clientId):null}
+function siteForJob(e,idx){return e?.siteId?idx.sites.get(e.siteId):null}
+
+function renderAll(){
+  renderDashboard(); renderJobs(); renderClients(); renderTime(); renderCalendar(); renderCatalog(); renderSync();
+  const t=stats().capturedAt||data().createdAt;
+  byId('lastSync').textContent=t?'• '+new Date(t).toLocaleTimeString('pl-PL'):'';
+  byId('stamp').textContent='Stan z '+dateTime(t)+' • Telefon → PC • tylko odczyt';
+}
+function renderDashboard(){
+  const x=stats();
+  byId('mClients').textContent=x.clientCount??0;
+  byId('mJobs').textContent=x.estimateCount??0;
+  byId('mActive').textContent=x.inProgressEstimateCount??0;
+  byId('mQuoted').textContent=money(x.quotedValue);
+  byId('mPlanned').textContent=num(x.plannedLaborHours)+' r-g';
+  byId('mActual').textContent=num(x.actualWorkHours)+' r-g';
+  byId('mTravel').textContent=num(x.travelHours)+' r-g';
+  byId('mSessions').textContent=x.sessionCount??0;
+
+  const active=arr(x,'byEstimate').filter(j=>['REALIZACJA','ZAAKCEPTOWANA'].includes(j.status));
+  byId('dashActive').innerHTML=active.length?active.slice(0,8).map(j=>{
+    const pct=j.plannedLaborHours>0?Math.min(100,Math.max(0,j.actualWorkHours/j.plannedLaborHours*100)):0;
+    return '<div class="mini"><strong>'+esc(j.title)+'</strong><div class="muted">'+esc(j.status)+' • '+num(j.actualWorkHours)+' / '+num(j.plannedLaborHours)+' r-g</div><div class="progress" style="margin-top:8px"><span style="width:'+pct+'%"></span></div></div>';
+  }).join(''):'<div class="empty">Brak aktywnych zleceń.</div>';
+
+  const alerts=[];
+  arr(x,'byEstimate').forEach(j=>{
+    if(j.plannedLaborHours>0 && j.actualWorkHours>j.plannedLaborHours*1.1){
+      alerts.push('<div class="alert"><strong>'+esc(j.title)+'</strong><br>Przekroczenie planu o '+num(j.actualWorkHours-j.plannedLaborHours)+' r-g.</div>');
+    }
+  });
+  calendarConflicts().forEach(c=>alerts.push('<div class="alert"><strong>Kolizja terminu</strong><br>'+esc(c.a.title)+' ↔ '+esc(c.b.title)+'</div>'));
+  byId('dashAlerts').innerHTML=alerts.length?alerts.slice(0,10).join(''):'<div class="empty">Brak wykrytych alertów.</div>';
+
+  byId('dashJobs').innerHTML=arr(x,'byEstimate').slice(0,20).map(j=>{
+    const d=Number(j.laborHoursDelta||0),cls=d>0.05?'badDelta':d<-0.05?'goodDelta':'';
+    return '<tr class="selectable" data-job="'+j.estimateId+'"><td>'+esc(j.title)+'</td><td>'+statusPill(j.status)+'</td><td class="num">'+money(j.clientTotal)+'</td><td class="num">'+num(j.plannedLaborHours)+'</td><td class="num">'+num(j.actualWorkHours)+'</td><td class="num '+cls+'">'+(d>=0?'+':'')+num(d)+'</td><td class="num">'+num(j.travelHours)+'</td></tr>';
+  }).join('')||'<tr><td colspan="7" class="muted">Brak zleceń.</td></tr>';
+  byId('dashJobs').querySelectorAll('tr[data-job]').forEach(r=>r.addEventListener('click',()=>{selectedJobId=Number(r.dataset.job);switchView('jobs')}));
+}
+
+function jobSearchText(e,idx){
+  const c=clientForJob(e,idx),s=siteForJob(e,idx);
+  return [e.title,e.status,c?.name,c?.phone,c?.email,s?.name,s?.address].join(' ').toLowerCase();
+}
+function renderJobs(){
+  if(!snapshot) return;
+  const idx=indexes(), all=arr(data(),'estimates').slice().sort((a,b)=>Number(b.createdAt)-Number(a.createdAt));
+  const statuses=[...new Set(all.map(x=>x.status).filter(Boolean))].sort();
+  const sel=byId('jobStatus');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">Wszystkie statusy</option>'+statuses.map(s=>'<option value="'+esc(s)+'">'+esc(s)+'</option>').join('');
+  if(statuses.includes(prev)) sel.value=prev;
+  const q=byId('jobSearch').value.trim().toLowerCase(), st=sel.value;
+  const filtered=all.filter(e=>(!q||jobSearchText(e,idx).includes(q))&&(!st||e.status===st));
+  byId('jobList').innerHTML=filtered.length?filtered.map(e=>{
+    const js=idx.jobStats.get(e.id)||{}, c=clientForJob(e,idx), site=siteForJob(e,idx);
+    return '<div class="listItem '+(selectedJobId===e.id?'active':'')+'" data-id="'+e.id+'"><strong>'+esc(e.title)+'</strong><div>'+statusPill(e.status)+' <span class="muted">'+money(js.clientTotal)+'</span></div><div class="muted">'+esc(c?.name||'Brak klienta')+' • '+esc(site?.address||'Brak adresu')+'</div></div>';
+  }).join(''):'<div class="empty">Brak pasujących zleceń.</div>';
+  byId('jobList').querySelectorAll('[data-id]').forEach(el=>el.addEventListener('click',()=>{selectedJobId=Number(el.dataset.id);renderJobs();renderJobDetail(selectedJobId)}));
+  if(selectedJobId==null && filtered[0]) selectedJobId=filtered[0].id;
+  if(selectedJobId!=null) renderJobDetail(selectedJobId);
+}
+function renderJobDetail(id){
+  const idx=indexes(), e=idx.estimates.get(id);
+  if(!e){byId('jobDetail').innerHTML='<div class="empty">Zlecenie nie istnieje.</div>';return}
+  const js=idx.jobStats.get(id)||{}, c=clientForJob(e,idx), site=siteForJob(e,idx);
+  const spaces=arr(data(),'spaces').filter(x=>x.estimateId===id);
+  const spaceIds=new Set(spaces.map(x=>x.id));
+  const openings=arr(data(),'openings').filter(x=>spaceIds.has(x.spaceId));
+  const lines=arr(data(),'estimateWorks').filter(x=>x.estimateId===id);
+  const extras=arr(data(),'extraCosts').filter(x=>x.estimateId===id);
+  const crewLinks=arr(data(),'estimateCrew').filter(x=>x.estimateId===id);
+  const sessions=arr(data(),'workSessions').filter(x=>x.estimateId===id);
+  const shopping=arr(data(),'shopping').filter(x=>x.estimateId===id);
+  const checklist=arr(data(),'toolChecklist').filter(x=>x.estimateId===id);
+
+  const roomHtml=spaces.map(s=>{
+    const l=Number(s.length||0),w=Number(s.width||0),h=Number(s.height||0),open=Number(s.openingsArea||0);
+    const floor=l*w, walls=Math.max(0,2*(l+w)*h-open);
+    const ownOpen=openings.filter(o=>o.spaceId===s.id);
+    return '<div class="mini"><strong>'+esc((s.level?s.level+' • ':'')+s.name)+'</strong><div class="muted">'+num2(l)+' × '+num2(w)+' × h '+num2(h)+' m</div><div>Podłoga: '+num2(floor)+' m² • Ściany: '+num2(walls)+' m² • Otwory: '+num2(open)+' m²</div>'+(ownOpen.length?'<div class="muted">'+ownOpen.map(o=>esc(o.type+': '+(o.name||o.type)+' '+o.quantity+'× '+o.width+'×'+o.height)).join('<br>')+'</div>':'')+'</div>';
+  }).join('');
+
+  const lineHtml=lines.map(line=>{
+    const w=idx.works.get(line.workId), qty=workQty(line,spaces), rate=laborRate(line,w);
+    return '<tr><td>'+esc(w?.name||('Robota #'+line.workId))+'</td><td>'+esc(spaces.find(s=>s.id===line.spaceId)?.name||'Całe zlecenie')+'</td><td>'+esc(line.quantitySource)+'</td><td class="num">'+num2(qty)+' '+esc(w?.unit||'')+'</td><td class="num">'+money(rate)+'</td><td class="num">'+money(qty*rate)+'</td></tr>';
+  }).join('');
+
+  const crewHtml=crewLinks.map(x=>{
+    const m=idx.crew.get(x.crewMemberId);
+    return '<div class="mini"><strong>'+esc(m?.name||('Osoba #'+x.crewMemberId))+'</strong><div class="muted">Udział pracy '+num(x.workSharePct)+'% • '+esc(x.payMode)+' • stawka '+num2(x.rate)+'</div></div>';
+  }).join('');
+
+  const sessionHours=type=>sessions.filter(s=>s.type===type).reduce((sum,s)=>sum+duration(s),0)/3600000;
+  const shoppingHtml=shopping.map(x=>{
+    const m=idx.materials.get(x.materialId);
+    return '<div class="mini"><strong>'+esc(m?.name||('Materiał #'+x.materialId))+'</strong><div>'+num2(x.requiredQty)+' '+esc(m?.unit||'')+' • '+esc(x.status)+'</div></div>';
+  }).join('');
+  const checklistHtml=checklist.map(x=>{
+    const t=idx.tools.get(x.toolId);
+    return '<div class="mini"><strong>'+esc(t?.name||('Narzędzie #'+x.toolId))+'</strong><div>'+x.qty+' szt. • '+(x.packed?'spakowane':'do spakowania')+'</div></div>';
+  }).join('');
+
+  byId('jobDetail').innerHTML=
+    '<div class="kv"><div>Nazwa</div><div><strong>'+esc(e.title)+'</strong></div><div>Status</div><div>'+statusPill(e.status)+'</div><div>Klient</div><div>'+esc(c?.name||'—')+'</div><div>Telefon</div><div>'+esc(c?.phone||'—')+'</div><div>Adres</div><div>'+esc(site?.address||'—')+'</div><div>Termin</div><div>'+esc(textDate(e.startDate))+' → '+esc(textDate(e.endDate||e.startDate))+'</div><div>Wycena</div><div><strong>'+money(js.clientTotal)+'</strong></div><div>Plan czasu</div><div>'+num(js.plannedLaborHours)+' r-g</div><div>Wykonanie</div><div>'+num(js.actualWorkHours)+' r-g</div><div>Dojazd</div><div>'+num(js.travelHours)+' r-g</div></div>'+
+    (e.notes?'<div class="info"><strong>Uwagi</strong><br>'+esc(e.notes)+'</div>':'')+
+    '<h3>Pomieszczenia i obmiary</h3><div class="sectionGrid">'+(roomHtml||'<div class="empty">Brak pomieszczeń.</div>')+'</div>'+
+    '<h3>Zakres robót</h3><div class="tableWrap"><table><thead><tr><th>Robota</th><th>Pomieszczenie</th><th>Źródło</th><th class="num">Ilość</th><th class="num">Stawka</th><th class="num">Robocizna</th></tr></thead><tbody>'+(lineHtml||'<tr><td colspan="6" class="muted">Brak robót.</td></tr>')+'</tbody></table></div>'+
+    '<h3>Ekipa</h3><div class="sectionGrid">'+(crewHtml||'<div class="empty">Brak przypisanej ekipy.</div>')+'</div>'+
+    '<h3>Czas rzeczywisty</h3><div class="sectionGrid"><div class="mini">Praca <strong>'+num(sessionHours('PRACA'))+' r-g</strong></div><div class="mini">Dojazd <strong>'+num(sessionHours('DOJAZD'))+' r-g</strong></div><div class="mini">Przerwy <strong>'+num(sessionHours('PRZERWA'))+' r-g</strong></div><div class="mini">Zaopatrzenie <strong>'+num(sessionHours('ZAOPATRZENIE'))+' r-g</strong></div></div>'+
+    '<h3>Koszty dodatkowe</h3><div class="sectionGrid">'+(extras.map(x=>'<div class="mini"><strong>'+esc(x.category)+'</strong><div>'+esc(x.description)+' • '+money(x.amount)+'</div></div>').join('')||'<div class="empty">Brak kosztów dodatkowych.</div>')+'</div>'+
+    '<details><summary>Lista zakupów ('+shopping.length+')</summary><div class="sectionGrid" style="margin-top:10px">'+(shoppingHtml||'<div class="empty">Brak pozycji.</div>')+'</div></details>'+
+    '<details style="margin-top:8px"><summary>Narzędzia ('+checklist.length+')</summary><div class="sectionGrid" style="margin-top:10px">'+(checklistHtml||'<div class="empty">Brak pozycji.</div>')+'</div></details>';
+}
+
+function renderClients(){
+  if(!snapshot) return;
+  const idx=indexes(), q=byId('clientSearch').value.trim().toLowerCase();
+  const clients=arr(data(),'clients').filter(c=>{
+    const sites=arr(data(),'sites').filter(s=>s.clientId===c.id);
+    return !q||[c.name,c.phone,c.email,c.notes,...sites.map(s=>s.address)].join(' ').toLowerCase().includes(q);
+  });
+  byId('clientList').innerHTML=clients.length?clients.map(c=>{
+    const jobs=arr(data(),'estimates').filter(e=>e.clientId===c.id);
+    const total=jobs.reduce((sum,e)=>sum+Number(idx.jobStats.get(e.id)?.clientTotal||0),0);
+    return '<div class="listItem '+(selectedClientId===c.id?'active':'')+'" data-id="'+c.id+'"><strong>'+esc(c.name)+'</strong><div class="muted">'+esc(c.phone||'bez telefonu')+' • '+jobs.length+' zleceń • '+money(total)+'</div></div>';
+  }).join(''):'<div class="empty">Brak pasujących klientów.</div>';
+  byId('clientList').querySelectorAll('[data-id]').forEach(el=>el.addEventListener('click',()=>{selectedClientId=Number(el.dataset.id);renderClients();renderClientDetail(selectedClientId)}));
+  if(selectedClientId==null&&clients[0]) selectedClientId=clients[0].id;
+  if(selectedClientId!=null) renderClientDetail(selectedClientId);
+}
+function renderClientDetail(id){
+  const idx=indexes(), c=idx.clients.get(id);
+  if(!c){byId('clientDetail').innerHTML='<div class="empty">Klient nie istnieje.</div>';return}
+  const sites=arr(data(),'sites').filter(s=>s.clientId===id);
+  const jobs=arr(data(),'estimates').filter(e=>e.clientId===id).sort((a,b)=>Number(b.createdAt)-Number(a.createdAt));
+  const total=jobs.reduce((sum,e)=>sum+Number(idx.jobStats.get(e.id)?.clientTotal||0),0);
+  byId('clientDetail').innerHTML=
+    '<div class="kv"><div>Nazwa</div><div><strong>'+esc(c.name)+'</strong></div><div>Telefon</div><div>'+esc(c.phone||'—')+'</div><div>E-mail</div><div>'+esc(c.email||'—')+'</div><div>Rabat klienta</div><div>'+num(c.loyaltyDiscountPct)+'%</div><div>Łączna wartość</div><div><strong>'+money(total)+'</strong></div></div>'+
+    (c.notes?'<div class="info">'+esc(c.notes)+'</div>':'')+
+    '<h3>Adresy</h3><div class="sectionGrid">'+(sites.map(s=>'<div class="mini"><strong>'+esc(s.name||'Inwestycja')+'</strong><div>'+esc(s.address||'—')+'</div></div>').join('')||'<div class="empty">Brak adresów.</div>')+'</div>'+
+    '<h3>Historia zleceń</h3><div class="list">'+(jobs.map(e=>{const js=idx.jobStats.get(e.id)||{};return '<div class="listItem" data-job="'+e.id+'"><strong>'+esc(e.title)+'</strong><div>'+statusPill(e.status)+' <span class="muted">'+money(js.clientTotal)+' • '+num(js.actualWorkHours)+' r-g</span></div></div>'}).join('')||'<div class="empty">Brak zleceń.</div>')+'</div>';
+  byId('clientDetail').querySelectorAll('[data-job]').forEach(el=>el.addEventListener('click',()=>{selectedJobId=Number(el.dataset.job);switchView('jobs')}));
+}
+
+function renderTime(){
+  if(!snapshot) return;
+  const x=stats(), idx=indexes();
+  byId('tWork').textContent=num(x.actualWorkHours)+' r-g';
+  byId('tTravel').textContent=num(x.travelHours)+' r-g';
+  byId('tBreak').textContent=num(x.breakHours)+' r-g';
+  byId('tSupply').textContent=num(x.supplyHours)+' r-g';
+  byId('timeCrew').innerHTML=arr(x,'byCrew').map(p=>'<tr><td>'+esc(p.name)+'</td><td class="num">'+num(p.workHours)+'</td><td class="num">'+num(p.travelHours)+'</td><td class="num">'+num(p.breakHours)+'</td><td class="num">'+num(p.supplyHours)+'</td></tr>').join('')||'<tr><td colspan="5" class="muted">Brak ekipy.</td></tr>';
+
+  const active=arr(data(),'workSessions').filter(s=>s.endAt==null);
+  byId('activeTimers').innerHTML=active.length?active.map(s=>'<div class="mini"><strong>'+esc(getJobTitle(s.estimateId))+'</strong><div>'+esc(getCrewName(s.crewMemberId))+' • '+esc(s.type)+' • '+num(msHours(duration(s)))+' h</div><div class="muted">od '+dateTime(s.startAt)+'</div></div>').join(''):'<div class="empty">Brak aktywnych liczników.</div>';
+
+  const q=byId('timeSearch').value.trim().toLowerCase(), type=byId('timeType').value;
+  const sessions=arr(data(),'workSessions').slice().sort((a,b)=>Number(b.startAt)-Number(a.startAt)).filter(s=>{
+    const txt=(getJobTitle(s.estimateId)+' '+getCrewName(s.crewMemberId)).toLowerCase();
+    return (!q||txt.includes(q))&&(!type||s.type===type);
+  });
+  byId('sessionRows').innerHTML=sessions.map(s=>'<tr><td>'+dateTime(s.startAt)+'</td><td>'+dateTime(s.endAt)+'</td><td>'+esc(getJobTitle(s.estimateId))+'</td><td>'+esc(getCrewName(s.crewMemberId))+'</td><td>'+esc(s.type)+'</td><td class="num">'+num(msHours(duration(s)))+' h</td><td>'+esc(s.endReason||'—')+'</td></tr>').join('')||'<tr><td colspan="7" class="muted">Brak sesji.</td></tr>';
+}
+
+function datesOverlap(aStart,aEnd,bStart,bEnd){
+  if(!aStart||!bStart) return false;
+  const as=new Date(aStart+'T00:00:00').getTime(), ae=new Date((aEnd||aStart)+'T23:59:59').getTime();
+  const bs=new Date(bStart+'T00:00:00').getTime(), be=new Date((bEnd||bStart)+'T23:59:59').getTime();
+  return as<=be&&bs<=ae;
+}
+function calendarConflicts(){
+  const jobs=arr(data(),'estimates').filter(e=>e.startDate&&e.status!=='ODRZUCONA');
+  const out=[];
+  for(let i=0;i<jobs.length;i++) for(let j=i+1;j<jobs.length;j++){
+    if(datesOverlap(jobs[i].startDate,jobs[i].endDate,jobs[j].startDate,jobs[j].endDate)) out.push({a:jobs[i],b:jobs[j]});
+  }
+  return out;
+}
+function renderCalendar(){
+  if(!snapshot) return;
+  const idx=indexes();
+  const jobs=arr(data(),'estimates').filter(e=>e.startDate).sort((a,b)=>String(a.startDate).localeCompare(String(b.startDate)));
+  const conflicts=calendarConflicts();
+  byId('calendarAlerts').innerHTML=conflicts.length?conflicts.map(c=>'<div class="alert">Kolizja: <strong>'+esc(c.a.title)+'</strong> i <strong>'+esc(c.b.title)+'</strong> ('+esc(c.a.startDate)+' / '+esc(c.b.startDate)+')</div>').join(''):'<div class="info">Brak kolizji terminów.</div>';
+  byId('calendarRows').innerHTML=jobs.length?jobs.map(e=>{
+    const c=clientForJob(e,idx),s=siteForJob(e,idx);
+    return '<div class="calendarRow"><strong>'+esc(e.startDate)+'</strong><span>'+esc(e.endDate||e.startDate)+'</span><div><strong>'+esc(e.title)+'</strong><div class="muted">'+esc(c?.name||'—')+' • '+esc(s?.address||'—')+'</div></div><span>'+statusPill(e.status)+'</span><button class="secondary" data-job="'+e.id+'">Otwórz</button></div>';
+  }).join(''):'<div class="empty">Brak zleceń z terminem.</div>';
+  byId('calendarRows').querySelectorAll('[data-job]').forEach(b=>b.addEventListener('click',()=>{selectedJobId=Number(b.dataset.job);switchView('jobs')}));
+}
+
+function renderCatalog(){
+  if(!snapshot) return;
+  const qW=byId('workSearch').value.trim().toLowerCase(), qM=byId('materialSearch').value.trim().toLowerCase(), qT=byId('toolSearch').value.trim().toLowerCase();
+  const works=arr(data(),'works').filter(w=>w.active!==false&&(!qW||[w.name,w.category,w.unit].join(' ').toLowerCase().includes(qW)));
+  const mats=arr(data(),'materials').filter(m=>m.active!==false&&(!qM||[m.name,m.manufacturer,m.unit].join(' ').toLowerCase().includes(qM)));
+  const tools=arr(data(),'tools').filter(t=>t.active!==false&&(!qT||[t.name,t.code,t.notes].join(' ').toLowerCase().includes(qT)));
+  byId('workList').innerHTML=works.slice(0,250).map(w=>'<div class="listItem"><strong>'+esc(w.name)+'</strong><div>'+esc(w.category)+' • '+esc(w.unit)+' • '+money(w.laborRate)+'</div><div class="muted">Obmiar: '+esc(w.defaultQuantitySource||'MANUAL')+' • '+num(w.laborHoursPerUnit)+' r-g/j.</div></div>').join('')||'<div class="empty">Brak pozycji.</div>';
+  byId('materialList').innerHTML=mats.slice(0,250).map(m=>'<div class="listItem"><strong>'+esc(m.name)+'</strong><div>'+esc(m.manufacturer||'')+' • '+esc(m.unit)+'</div><div class="muted">Tani '+money(m.priceBudget)+' • Standard '+money(m.priceStandard)+' • Premium '+money(m.pricePremium)+'</div></div>').join('')||'<div class="empty">Brak pozycji.</div>';
+  byId('toolList').innerHTML=tools.slice(0,250).map(t=>'<div class="listItem"><strong>'+esc(t.name)+'</strong><div>'+esc(t.code||'bez kodu')+'</div><div class="muted">'+esc(t.notes||'')+'</div></div>').join('')||'<div class="empty">Brak pozycji.</div>';
+}
+function renderSync(){
+  if(!snapshot) return;
+  const s=data(),x=stats();
+  byId('syncState').innerHTML='<div class="kv"><div>Kierunek</div><div><strong>Telefon → PC</strong></div><div>Tryb</div><div>tylko odczyt</div><div>Ostatni snapshot</div><div>'+dateTime(x.capturedAt||s.createdAt)+'</div><div>Automatyczne odświeżanie</div><div>co 30 sekund</div><div>Format</div><div>'+esc(s.format||'—')+'</div></div>';
+  const keys=['clients','sites','estimates','spaces','openings','estimateWorks','works','materials','tools','crewMembers','workSessions','workSessionEvents','shopping','toolChecklist','photos'];
+  byId('syncCounts').innerHTML='<div class="sectionGrid">'+keys.map(k=>'<div class="mini"><strong>'+esc(k)+'</strong><div class="metricSub">'+arr(s,k).length+' rekordów</div></div>').join('')+'</div>';
+}
+
+function exportJson(){
+  if(!snapshot)return;
+  const blob=new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Budowlanka_snapshot_'+Date.now()+'.json';a.click();URL.revokeObjectURL(a.href);
+}
+function exportCsv(){
+  if(!snapshot)return;
+  const idx=indexes();
+  const rows=[['ID','Zlecenie','Status','Klient','Adres','Termin od','Termin do','Wycena PLN','Plan r-g','Wykonanie r-g','Dojazd r-g']];
+  arr(data(),'estimates').forEach(e=>{
+    const js=idx.jobStats.get(e.id)||{},c=clientForJob(e,idx),s=siteForJob(e,idx);
+    rows.push([e.id,e.title,e.status,c?.name||'',s?.address||'',e.startDate||'',e.endDate||'',js.clientTotal||0,js.plannedLaborHours||0,js.actualWorkHours||0,js.travelHours||0]);
+  });
+  const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Budowlanka_zlecenia_'+Date.now()+'.csv';a.click();URL.revokeObjectURL(a.href);
+}
+
+code.value=localStorage.getItem('budowlanka_pc_code')||'';
+byId('refresh').addEventListener('click',load);
+['saveJson','saveJson2'].forEach(id=>byId(id).addEventListener('click',exportJson));
+['saveCsv','saveCsv2'].forEach(id=>byId(id).addEventListener('click',exportCsv));
+byId('jobSearch').addEventListener('input',renderJobs);
+byId('jobStatus').addEventListener('change',renderJobs);
+byId('clientSearch').addEventListener('input',renderClients);
+byId('timeSearch').addEventListener('input',renderTime);
+byId('timeType').addEventListener('change',renderTime);
+byId('workSearch').addEventListener('input',renderCatalog);
+byId('materialSearch').addEventListener('input',renderCatalog);
+byId('toolSearch').addEventListener('input',renderCatalog);
+
+if(code.value) load();
+setInterval(()=>{if(code.value.trim())load()},30000);
+</script>
+</body>
+</html>
